@@ -1,0 +1,29 @@
+Tiles for Kholdstare is on page 190....
+And these combos are also for Kholdstare
+Combo 12608
+Combo 12611
+Combo 12612
+Combo 12613
+Combo 12614
+Combo 12615
+Combo 12616
+Combo 12617
+Combo 12618
+Combo 12619
+
+And weapon sprite 92
+weapon sprite 93
+and weapon sprite 94
+
+-----------------------------------------------------------------
+
+
+And autoghost must be setuped to get Kholdstare to work.
+And the script file is from ywkls who fixed the Kholdstare to work propely
+and file is one of Castchaos quests and i have his permision to use it
+to whatever i want.
+
+Take the red portal in the starting screen and you have the Kholdstare 
+in there.
+
+enjoy
