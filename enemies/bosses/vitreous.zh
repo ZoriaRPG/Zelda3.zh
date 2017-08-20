@@ -1,0 +1,108 @@
+//ywkls
+
+const int VITREOUS_EYE = 209;//Enemy Id for small eyes.
+
+ffc script Vitreous{
+      void run(int enemyID){
+          npc n = Ghost_InitAutoGhost(this, enemyID);
+          n->Extend = 3;
+          Ghost_TileWidth = 2;
+          Ghost_TileHeight = 3; 
+          int combo = n->Attributes[10];
+          Ghost_Transform(this,n,combo,-1,2,3);
+          float speed = n->Step;
+          n->Step = 0;
+          int mode = 1;
+          int timer = 180;
+          npc n2 = Screen->CreateNPC(VITREOUS_EYE);
+          npc n3 = Screen->CreateNPC(VITREOUS_EYE);
+          npc n4 = Screen->CreateNPC(VITREOUS_EYE);
+          npc n5 = Screen->CreateNPC(VITREOUS_EYE);
+          int Eye_HP = n2->HP;
+          Ghost_X = 112;
+          Ghost_Y = 48;
+          Ghost_SetPosition(this, n);
+          n2->X = n->X-16;
+          n2->Y = n->Y +48;
+          n3->X = n->X;
+          n3->Y = n->Y +64;
+          n4->X = n->X +16;
+          n4->Y = n->Y +64;
+          n5->X = n->X+32;
+          n5->Y = n->Y +48;
+          float angle = 60;
+          float counter = -1;
+          bool SwitchMode = false;
+          int turncombo = combo+1;
+          Ghost_SetHitOffsets(n,6,11,0,0);
+          while(n->HP > 0){
+                if(mode == 2 && SwitchMode){
+                    n2 = Screen->CreateNPC(VITREOUS_EYE);
+                    n3 = Screen->CreateNPC(VITREOUS_EYE);
+                    n4 = Screen->CreateNPC(VITREOUS_EYE);
+                    n5 = Screen->CreateNPC(VITREOUS_EYE);
+                    n2->X = n->X-16;
+                    n2->Y = n->Y +48;
+                    n3->X = n->X;
+                    n3->Y = n->Y +64;
+                    n4->X = n->X +16;
+                    n4->Y = n->Y +64;
+                    n5->X = n->X+32;
+                    n5->Y = n->Y +48;
+                    n2->HP = 2 * Eye_HP;
+                    n3->HP = 2 * Eye_HP;
+                    n4->HP = 2 * Eye_HP;
+                    n5->HP = 2 * Eye_HP;
+                    SwitchMode = false;
+               }
+               else if(mode == 3 && SwitchMode){
+                    Ghost_SetAllDefenses(n, NPCDT_NONE);
+                    n->Step = speed;
+                    counter = Ghost_HaltingWalk4(counter, n->Step, n->Rate, n->Homing, 2, n->Haltrate, 45);
+                    Ghost_Data = turncombo;    
+               }
+               if(n2->HP <=0 && n3->HP <= 0 && n4->HP <= 0 && n5->HP <= 0 && mode == 1 && !SwitchMode){
+                    mode = 2;
+                    SwitchMode = true;
+               }
+               else if(n2->HP <=0 && n3->HP <= 0 && n4->HP <= 0 && n5->HP <= 0 && mode == 2 && !SwitchMode){
+                    mode = 3;
+                    SwitchMode = true;
+               }
+               if(timer <=0){
+                    int wait = 60;
+                    int color = 0;
+                    int direction =Choose(1,-1);
+                    int angle_offset = Choose(0,90,180,270);
+                    if(direction == 1)angle = 45;
+                    else if(direction == -1)angle = 135;
+                    while(wait>0){
+                           color= (color +1)%60;
+                           if(direction==1)angle = (angle+1)%360;
+                           else angle = (angle-1)%360;
+                           Laser(0, (n->X+16) + 1 * Cos(angle), (n->Y+32) + 1 * Sin(angle), 8, angle+angle_offset, n->WeaponDamage, color);
+                           wait--;
+                           counter = Ghost_HaltingWalk4(counter, n->Step, n->Rate, n->Homing, 2, n->Haltrate, 45);
+                           if(n->HP <=10){
+                                Ghost_DeathAnimation(this,n, 2);
+                                Waitframes(60);
+                                n->HP = 0;
+                                Quit();
+                           }
+                           Ghost_Waitframe(this,n,true,true);
+                    }
+                    if(mode == 1)timer = 180;
+                    else if(mode == 2)timer = 120;
+                    else if(mode == 3)timer = 90;
+               }
+               timer--;
+               if(n->HP <=10){
+                   Ghost_DeathAnimation(this,n, 2);
+                   Waitframes(60);
+                   n->HP = 0;
+                   Quit();
+               }
+               Ghost_Waitframe(this, n, true, true);
+          }
+     }
+}
