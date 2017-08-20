@@ -1,0 +1,494 @@
+import "std.zh"
+import "ghost.zh"
+import "string.zh"
+import "ffcscript.zh"
+
+//Helmasaur King Script
+//Enemy Attributes:
+//Attribute 11: The first of 9 combos used for the parts of the boss:
+//	Combos 1-4: The top left corner of the boss (4x5 tiles) in various stages of the mask cracking
+//	Combos 5-6: The left and right legs (1x2 tiles)
+//	Combo 7: The mouth
+//	Combo 8: A tail segment
+//	Combo 9: The end of the tail
+//Attribute 12: The slot this script is loaded into
+
+//Helmasaur King Constants
+const int TIL_LINK_HAMMER_UP = 31; //The tile for Link using the hammer/sword/wand while facing up. It's used for detecting when Link has the hammer in the down position or has his sword/wand outstretched.
+const int SFX_HELMASAUR_HURT = 11; //The sound that plays when the enemy is hurt by bombs/hammer while wearing the mask
+const int SFX_HELMASAUR_BLOCK = 57; //The sound that plays when a weapon hits the mask
+const int SFX_HELMASAUR_MASK_CHUNK = 65; //The sound that plays when a chunk of the mask flies off
+const int SFX_HELMASAUR_STEP = 61; //The sound that plays when the enemy takes a step
+const int SFX_HELMASAUR_TAIL_WHIP = 63; //The sound that plays during the tail whip attack
+const int SFX_HELMASAUR_MOUTH = 64; //The sound that plays when the enemy's mouth opens
+const int SPR_HELMASAUR_MASK_CHUNK = 88; //The sprite used for mask chunks
+const int SPR_HELMASAUR_MASK_SHARDS = 89; //The sprite used for the whole mask coming off. Uses 8 tiles. See the weapon in the example quest for setup.
+const int SPR_HELMASAUR_FIREBALL = 90; //The sprite used for the fireball attack. Has two frames of animation, but uses four tiles: two for the big fireballs followed by two for the small fireballs
+const int FFCS_HELMASAUR_FIREBALL = 2; //The FFC script slot containing the Helmasaur_Fireball script
+
+const int HELMASAUR_ATTACK_COOLDOWN = 20; //The number of frames (60ths of a second)
+const int HELMASAUR_ATTACK_FREQ = 10; //The frequency of attacks when the
+
+//Helmasaur Array Constants (DON'T TOUCH!)
+const int HELMASAUR_STATE = 0;
+const int HELMASAUR_STEP_COUNTER = 1;
+const int HELMASAUR_MOUTH_COUNTER = 2;
+const int HELMASAUR_TAIL_COUNTER = 3;
+const int HELMASAUR_TAIL_X = 4;
+const int HELMASAUR_TAIL_Y = 5;
+const int HELMASAUR_TAIL_ANGLE = 6;
+const int HELMASAUR_TAIL_OLDANGLE = 7;
+const int HELMASAUR_HP = 8;
+const int HELMASAUR_INVINCIBILITY_FRAMES = 9;
+const int HELMASAUR_LINK_KNOCKBACK = 10;
+const int HELMASAUR_FORCE_TAIL_CURVE = 11;
+
+ffc script Helmasaur_King{
+	void DrawComboArc(int Layer, int X1, int Y1, int X2, int Y2, int Combo, int CSet, int Segments, int Curve, int Opacity){
+		int a = Angle(X1, Y1, X2, Y2);
+		int d = Distance(X1, Y1, X2, Y2);
+		int w = 180/d;
+		for(int i=0; i<Segments; i++){
+			Screen->FastCombo(Layer, X1+VectorX((d/Segments)*i, a)+VectorX(Curve*Sin(w*(d/Segments*i)), a-90), Y1+VectorY((d/Segments)*i, a)+VectorY(Curve*Sin(w*(d/Segments*i)), a-90), Combo, CSet, Opacity);
+		}
+	}
+	void Helmasaur_Waitframe(ffc this, npc ghost, int Combo, int HelmasaurVars, int SavedDefenses){
+		if(HelmasaurVars[HELMASAUR_TAIL_COUNTER]>-1){
+			HelmasaurVars[HELMASAUR_TAIL_COUNTER] += 4;
+			if(HelmasaurVars[HELMASAUR_TAIL_COUNTER]>360){
+				HelmasaurVars[HELMASAUR_TAIL_COUNTER] -= 360;
+			}
+			HelmasaurVars[HELMASAUR_TAIL_OLDANGLE] = HelmasaurVars[HELMASAUR_TAIL_ANGLE];
+			HelmasaurVars[HELMASAUR_TAIL_ANGLE] = -90+40*Sin(HelmasaurVars[HELMASAUR_TAIL_COUNTER]);
+			HelmasaurVars[HELMASAUR_TAIL_X] = VectorX(64, HelmasaurVars[HELMASAUR_TAIL_ANGLE]);
+			HelmasaurVars[HELMASAUR_TAIL_Y] = 64+VectorY(96, HelmasaurVars[HELMASAUR_TAIL_ANGLE]);
+		}
+		DrawHelmasaur(this, ghost, Combo, HelmasaurVars);
+		CheckMaskCollision(this, ghost, Combo, HelmasaurVars, SavedDefenses);
+		if(HelmasaurVars[HELMASAUR_LINK_KNOCKBACK]>0){
+			if(CanWalk(Link->X, Link->Y, DIR_DOWN, 2, false)){
+				Link->Y += 2;
+			}
+			HelmasaurVars[HELMASAUR_LINK_KNOCKBACK]--;
+		}
+		if(!Ghost_Waitframe(this, ghost, false, false)){
+			Helmasaur_Explode(this, ghost, true, Combo, HelmasaurVars);
+			Quit();
+		}
+	}
+	void DrawHelmasaur(ffc this, npc ghost, int Combo, int HelmasaurVars){
+		if(Link->HP>0){
+			Screen->DrawCombo(2, Ghost_X-3, Ghost_Y+10+5*Sin(HelmasaurVars[HELMASAUR_STEP_COUNTER]), Combo+4, 1, 2, this->CSet, -1, -1, 0, 0, 0, -1, 0, true, 128);
+			Screen->DrawCombo(2, Ghost_X+51, Ghost_Y+10-5*Sin(HelmasaurVars[HELMASAUR_STEP_COUNTER]), Combo+5, 1, 2, this->CSet, -1, -1, 0, 0, 0, -1, 0, true, 128);
+			Screen->DrawCombo(2, Ghost_X-3, Ghost_Y+36+5*Cos(HelmasaurVars[HELMASAUR_STEP_COUNTER]), Combo+4, 1, 2, this->CSet, -1, -1, 0, 0, 0, -1, 0, true, 128);
+			Screen->DrawCombo(2, Ghost_X+51, Ghost_Y+36-5*Cos(HelmasaurVars[HELMASAUR_STEP_COUNTER]), Combo+5, 1, 2, this->CSet, -1, -1, 0, 0, 0, -1, 0, true, 128);
+			Screen->FastCombo(2, Ghost_X+24, Ghost_Y+48+HelmasaurVars[HELMASAUR_MOUTH_COUNTER], Combo+6, this->CSet, 128);
+			Screen->DrawCombo(2, Ghost_X, Ghost_Y-16, Combo+HelmasaurVars[HELMASAUR_STATE], 4, 5, this->CSet, -1, -1, 0, 0, 0, -1, 0, true, 128);
+			int X1 = this->X+24;
+			int Y1 = this->Y-8;
+			int X2 = X1+HelmasaurVars[HELMASAUR_TAIL_X];
+			int Y2 = Y1+HelmasaurVars[HELMASAUR_TAIL_Y];
+			int Direction = 1;
+			if(X2<X1)Direction = -1;
+			int XDist = Abs(X1-X2);
+			int Curve = Direction*XDist/4;
+			if(HelmasaurVars[HELMASAUR_FORCE_TAIL_CURVE]!=-1000)
+				Curve = HelmasaurVars[HELMASAUR_FORCE_TAIL_CURVE];
+			if(ghost->CollDetection){
+				DrawComboArc(2, X1, Y1, X2, Y2, Combo+7, this->CSet, 20, Curve, 128);
+				Screen->FastCombo(2, X2, Y2, Combo+8, this->CSet, 128);
+				HelmasaurLinkCollision(this, ghost, HelmasaurVars, 20, Curve);
+			}
+		}
+	}
+	void HelmasaurLinkCollision(ffc this, npc ghost, int HelmasaurVars, int Segments, int Curve){
+		if(RectCollision(Link->X+2, Link->Y+2, Link->X+14, Link->Y+14, this->X+8, this->Y, this->X+56, this->Y+56)){
+			int Angle = Angle(CenterLinkX(), CenterLinkY(), CenterX(this), CenterY(this));
+			eweapon e = FireEWeapon(EW_SCRIPT10, Link->X+VectorX(4, Angle), Link->Y+VectorY(4, Angle), 0, 0, ghost->Damage, -1, -1, EWF_UNBLOCKABLE);
+			e->DrawYOffset = -1000;
+			SetEWeaponLifespan(e, EWL_TIMER, 1);
+			SetEWeaponDeathEffect(e, EWD_VANISH, 0);
+		}
+		int LeftLegX = Ghost_X-3;
+		int LeftLegY = Ghost_Y+36+5*Cos(HelmasaurVars[HELMASAUR_STEP_COUNTER]);
+		int RightLegX = Ghost_X+51;
+		int RightLegY = Ghost_Y+36-5*Cos(HelmasaurVars[HELMASAUR_STEP_COUNTER]);
+		if(RectCollision(Link->X+2, Link->Y+2, Link->X+14, Link->Y+14, LeftLegX+2, LeftLegY+2, LeftLegX+14, LeftLegY+28)){
+			int Angle = Angle(Link->X, Link->Y, LeftLegX+8, LeftLegY+16);
+			eweapon e = FireEWeapon(EW_SCRIPT10, Link->X+VectorX(4, Angle), Link->Y+VectorY(4, Angle), 0, 0, ghost->Damage, -1, -1, EWF_UNBLOCKABLE);
+			e->DrawYOffset = -1000;
+			SetEWeaponLifespan(e, EWL_TIMER, 1);
+			SetEWeaponDeathEffect(e, EWD_VANISH, 0);
+		}
+		else if(RectCollision(Link->X+2, Link->Y+2, Link->X+14, Link->Y+14, RightLegX+2, RightLegY+2, RightLegX+14, RightLegY+28)){
+			int Angle = Angle(Link->X, Link->Y, RightLegX+8, RightLegY+16);
+			eweapon e = FireEWeapon(EW_SCRIPT10, Link->X+VectorX(4, Angle), Link->Y+VectorY(4, Angle), 0, 0, ghost->Damage, -1, -1, EWF_UNBLOCKABLE);
+			e->DrawYOffset = -1000;
+			SetEWeaponLifespan(e, EWL_TIMER, -1);
+			SetEWeaponDeathEffect(e, EWD_VANISH, 0);
+		}
+		int X1 = this->X+24;
+		int Y1 = this->Y-8;
+		int X2 = X1+HelmasaurVars[HELMASAUR_TAIL_X];
+		int Y2 = Y1+HelmasaurVars[HELMASAUR_TAIL_Y];
+		int a = Angle(X1, Y1, X2, Y2);
+		int d = Distance(X1, Y1, X2, Y2);
+		int w = 180/d;
+		for(int i=0; i<=20; i++){
+			int X = X1+VectorX((d/Segments)*i, a)+VectorX(Curve*Sin(w*(d/Segments*i)), a-90);
+			int Y = Y1+VectorY((d/Segments)*i, a)+VectorY(Curve*Sin(w*(d/Segments*i)), a-90);
+			if(SquareCollision(Link->X+2, Link->Y+2, 12, X+2, Y+2, 12)){
+				int Angle = Angle(Link->X, Link->Y, X, Y);
+				eweapon e = FireEWeapon(EW_SCRIPT10, Link->X+VectorX(4, Angle), Link->Y+VectorY(4, Angle), 0, 0, ghost->Damage, -1, -1, EWF_UNBLOCKABLE);
+				e->DrawYOffset = -1000;
+				SetEWeaponLifespan(e, EWL_TIMER, 1);
+				SetEWeaponDeathEffect(e, EWD_VANISH, 0);
+			}
+		}
+	}
+	void CheckMaskCollision(ffc this, npc ghost, int Combo, int HelmasaurVars, int SavedDefenses){
+		if(HelmasaurVars[HELMASAUR_STATE]<3){
+			for(int i=1; i<=Screen->NumLWeapons(); i++){
+				lweapon l = Screen->LoadLWeapon(i);
+				if((l->ID==LW_HAMMER||l->ID==LW_SWORD||l->ID==LW_WAND)&&RectCollision(Link->X+2, Link->Y-14, Link->X+14, Link->Y-2, this->X+14, this->Y+32, this->X+40, this->Y+62)&&Link->Tile==TIL_LINK_HAMMER_UP&&HelmasaurVars[HELMASAUR_INVINCIBILITY_FRAMES]==0){
+					HelmasaurVars[HELMASAUR_LINK_KNOCKBACK] = 20;
+					HelmasaurVars[HELMASAUR_INVINCIBILITY_FRAMES] = 40;
+					Game->PlaySound(SFX_HELMASAUR_BLOCK);
+					if(l->ID==LW_HAMMER){
+						HelmasaurVars[HELMASAUR_HP]--;
+						Game->PlaySound(SFX_HELMASAUR_HURT);
+					}
+				}
+				else if((l->ID==LW_BOMBBLAST||l->ID==LW_SBOMBBLAST)&&RectCollision(l->X+2, l->Y+2, l->X+14, l->Y+14, this->X+14, this->Y+32, this->X+40, this->Y+62)&&HelmasaurVars[HELMASAUR_INVINCIBILITY_FRAMES]==0){
+					HelmasaurVars[HELMASAUR_INVINCIBILITY_FRAMES] = 40;
+					HelmasaurVars[HELMASAUR_HP] -= 4;
+					Game->PlaySound(SFX_HELMASAUR_BLOCK);
+					Game->PlaySound(SFX_HELMASAUR_HURT);
+				}
+				else if((l->ID==LW_ARROW||l->ID==LW_BEAM||l->ID==LW_BRANG||l->ID==LW_MAGIC||l->ID==LW_HOOKSHOT||l->ID==LW_REFMAGIC||l->ID==LW_REFFIREBALL||l->ID==LW_REFROCK||l->ID==LW_REFBEAM)&&RectCollision(l->X+l->HitXOffset, l->Y+l->HitYOffset, l->X+l->HitXOffset+l->HitWidth, l->Y+l->HitYOffset+l->HitHeight, this->X+14, this->Y+32, this->X+40, this->Y+62)){
+					Game->PlaySound(SFX_HELMASAUR_BLOCK);
+					if(l->ID==LW_BRANG||l->ID==LW_HOOKSHOT)
+						l->DeadState = WDS_BOUNCE;
+					else
+						l->DeadState = 0;
+				}
+			}
+			if(HelmasaurVars[HELMASAUR_HP]<17&&HelmasaurVars[HELMASAUR_STATE]==0){
+				HelmasaurVars[HELMASAUR_STATE] = 1;
+				eweapon e = FireEWeapon(EW_SCRIPT10, Ghost_X+10, Ghost_Y+40, DegtoRad(180+Rand(-20, 20)), 150, 0, SPR_HELMASAUR_MASK_CHUNK, SFX_HELMASAUR_MASK_CHUNK, 0);
+				e->CollDetection = false;
+				SetEWeaponMovement(e, EWM_THROW, 3, EWMF_DIE);
+				SetEWeaponDeathEffect(e, EWD_VANISH, 0);
+			}
+			else if(HelmasaurVars[HELMASAUR_HP]<10&&HelmasaurVars[HELMASAUR_STATE]==1){
+				HelmasaurVars[HELMASAUR_STATE] = 2;
+				eweapon e = FireEWeapon(EW_SCRIPT10, Ghost_X+38, Ghost_Y+40, DegtoRad(Rand(-20, 20)), 150, 0, SPR_HELMASAUR_MASK_CHUNK, SFX_HELMASAUR_MASK_CHUNK, 0);
+				e->CollDetection = false;
+				SetEWeaponMovement(e, EWM_THROW, 3, EWMF_DIE);
+				SetEWeaponDeathEffect(e, EWD_VANISH, 0);
+			}
+			else if(HelmasaurVars[HELMASAUR_HP]<1&&HelmasaurVars[HELMASAUR_STATE]==2){
+				HelmasaurVars[HELMASAUR_STATE] = 3;
+				int ShardX[8] = {0, 16, 32, 0, 16, 32, 8, 24};
+				int ShardY[8] = {0, 0, 0, 16, 16, 16, 32, 32};
+				int ShardA[8] = {-135+Rand(-20, 20), -90+Rand(-20, 20), -45+Rand(-20, 20), 180+Rand(-20, 20), -90+Rand(-20, 20), Rand(-20, 20), 160+Rand(-20, 20), 30+Rand(-20, 20)};
+				int ShardS[8] = {150, 150, 150, 150, 50, 150, 150, 150};
+				for(int i=0; i<8; i++){
+					eweapon e = FireEWeapon(EW_SCRIPT10, Ghost_X+8+ShardX[i], Ghost_Y+25+ShardY[i], DegtoRad(ShardA[i]), ShardS[i], 0, SPR_HELMASAUR_MASK_SHARDS, SFX_HELMASAUR_MASK_CHUNK, 0);
+					e->CollDetection = false;
+					e->Tile += i;
+					SetEWeaponMovement(e, EWM_THROW, 3, EWMF_DIE);
+					SetEWeaponDeathEffect(e, EWD_VANISH, 0);
+				}
+			}
+		}
+		if(HelmasaurVars[HELMASAUR_INVINCIBILITY_FRAMES]>0){
+			HelmasaurVars[HELMASAUR_INVINCIBILITY_FRAMES]--;
+			if(HelmasaurVars[HELMASAUR_INVINCIBILITY_FRAMES]==0&&HelmasaurVars[HELMASAUR_STATE]==3){
+				HelmasaurVars[HELMASAUR_INVINCIBILITY_FRAMES] = -1;
+				Ghost_SetDefenses(ghost, SavedDefenses);
+			}
+		}
+	}
+	void Helmasaur_Explode(ffc this, npc ghost, bool flash, int Combo, int HelmasaurVars){
+		lweapon explosion;
+		npc deathSFXNPC;
+		deathSFXNPC=Screen->CreateNPC(ghost->ID);
+		deathSFXNPC->X=ghost->X;
+		deathSFXNPC->Y=176;
+		deathSFXNPC->ItemSet=0;
+		deathSFXNPC->HP=0;
+		deathSFXNPC->Misc[__GHI_NPC_DATA]=0x10000;
+		this->CSet=Ghost_CSet;
+		this->Flags[FFCF_OVERLAY]=false;
+		this->Vx=0;
+		this->Vy=0;
+		this->Ax=0;
+		this->Ay=0;
+		ghost->HP=1;
+		ghost->CollDetection=false;
+		ghost->SFX=0;
+		if(flash)
+			__Ghost_FlashCounter=10000;
+		else
+			Ghost_StopFlashing();
+		int Direction = 1;
+		if(HelmasaurVars[HELMASAUR_TAIL_X]<24)
+			Direction = -1;
+		int XDist = Abs(HelmasaurVars[HELMASAUR_TAIL_X]-24);
+		int Curve = Direction*XDist/4;
+		if(HelmasaurVars[HELMASAUR_FORCE_TAIL_CURVE]!=-1000)
+			Curve = HelmasaurVars[HELMASAUR_FORCE_TAIL_CURVE];
+		int a = Angle(0, 0, HelmasaurVars[HELMASAUR_TAIL_X], HelmasaurVars[HELMASAUR_TAIL_Y]);
+		int d = Distance(0, 0, HelmasaurVars[HELMASAUR_TAIL_X], HelmasaurVars[HELMASAUR_TAIL_Y]);
+		int w = 180/d;
+		int SegmentX[21];
+		int SegmentY[21];
+		int SegmentT[21];
+		for(int i=0; i<=20; i++){
+			SegmentX[i] = this->X+24+VectorX((d/20)*i, a)+VectorX(Curve*Sin(w*(d/20*i)), a-90);
+			SegmentY[i] = this->Y-8+VectorY((d/20)*i, a)+VectorY(Curve*Sin(w*(d/20*i)), a-90);
+			SegmentT[i] = Combo+7;
+		}
+		for(int i=20; i>=0; i--){
+			SegmentT[i] = 0;
+			explosion = CreateLWeaponAt(LW_BOMBBLAST, SegmentX[i], SegmentY[i]);
+			explosion->CollDetection = false;
+			for(int j=0; j<8; j++){
+				DrawHelmasaur(this, ghost, Combo, HelmasaurVars);
+				if(Link->HP>0){
+					for(int k=0; k<=20; k++){
+						Screen->FastCombo(2, SegmentX[k], SegmentY[k], SegmentT[k], this->CSet, 128);
+					}
+				}
+				Ghost_SetPosition(this, ghost);
+				Ghost_WaitframeLight(this, ghost);
+			}
+		}
+		for(int i=0; i<15; i++){
+			explosion=Screen->CreateLWeapon(LW_BOMBBLAST);
+			explosion->X=Ghost_X+ghost->DrawXOffset+Rand(16*Ghost_TileWidth)-8;
+			explosion->Y=(Ghost_Y+ghost->DrawYOffset)-
+						(Ghost_Z+ghost->DrawZOffset)+
+						Rand(16*Ghost_TileHeight)-8;
+			explosion->CollDetection=false;
+			for(int j=0; j<16; j++){
+				DrawHelmasaur(this, ghost, Combo, HelmasaurVars);
+				Ghost_SetPosition(this, ghost);
+				Ghost_WaitframeLight(this, ghost);
+			}
+		}
+		ghost->X=1024;
+		this->Data=GH_INVISIBLE_COMBO;
+		Ghost_Data=GH_INVISIBLE_COMBO;
+		Ghost_ClearCombos();
+	}
+	void run(int enemyid){
+		npc ghost = Ghost_InitAutoGhost(this, enemyid);
+		Ghost_SetFlag(GHF_IGNORE_ALL_TERRAIN);
+		Ghost_SetFlag(GHF_IGNORE_NO_ENEMY);
+		int Combo = ghost->Attributes[10];
+		Ghost_Transform(this, ghost, GH_INVISIBLE_COMBO, ghost->CSet, 4, 4);
+		Ghost_SetHitOffsets(ghost, 39, 10, 28, 28);
+		int HelmasaurVars[12] = {0, 0, 0, 0, 0, 0, 0, 0, 17, 0, 0, -1000};
+		int SavedDefenses[18];
+		Ghost_StoreDefenses(ghost, SavedDefenses);
+		Ghost_SetAllDefenses(ghost, NPCDT_IGNORE);
+		Ghost_X = 96;
+		Ghost_Y = 24;
+		this->X = 96;
+		this->Y = 24;
+		int AttackCooldown = HELMASAUR_ATTACK_COOLDOWN;
+		int LastAttack = -1;
+		int InitHP = ghost->HP;
+		while(true){
+			int Rustled = 1;
+			if(Ghost_HP<InitHP/2)Rustled = 2;
+			if(AttackCooldown>0)
+				AttackCooldown--;
+			if(AttackCooldown==0&&Rand(1, HELMASAUR_ATTACK_FREQ)==1){
+				int Attack;
+				if(LastAttack==2)
+					Attack = Choose(0, 1);
+				else if(Abs(CenterLinkX()-CenterX(this))>48){
+					if(LastAttack==1)
+						Attack = Choose(0, 0, 1);
+					else
+						Attack = Choose(0, 1, 1, 1, 2);
+
+				}
+				else{
+					if(LastAttack==1)
+						Attack = 0;
+					else
+						Attack = Choose(0, 0, 0, 1, 2);
+				}
+				if(Attack==1&&Ghost_Y<64){
+					for(int i=0; i<40; i++){
+						HelmasaurVars[HELMASAUR_TAIL_COUNTER]++;
+						Helmasaur_Waitframe(this, ghost, Combo, HelmasaurVars, SavedDefenses);
+					}
+					for(int i=0; i<30; i++){
+						HelmasaurVars[HELMASAUR_TAIL_COUNTER] += 2;
+						Helmasaur_Waitframe(this, ghost, Combo, HelmasaurVars, SavedDefenses);
+					}
+					int Side = -1;
+					if(Link->X>=this->X+24)
+						Side = 1;
+					int TailSpeed = HelmasaurVars[HELMASAUR_TAIL_ANGLE]-HelmasaurVars[HELMASAUR_TAIL_OLDANGLE];
+					while(Abs(-90+HelmasaurVars[HELMASAUR_TAIL_ANGLE])>20&&Sign(HelmasaurVars[HELMASAUR_TAIL_ANGLE]+90)!=Side||Sign(HelmasaurVars[HELMASAUR_TAIL_ANGLE]-HelmasaurVars[HELMASAUR_TAIL_OLDANGLE])!=Side){
+						HelmasaurVars[HELMASAUR_TAIL_COUNTER] += 4;
+						Helmasaur_Waitframe(this, ghost, Combo, HelmasaurVars, SavedDefenses);
+					}
+					int StartX = HelmasaurVars[HELMASAUR_TAIL_X];
+					int StartY = HelmasaurVars[HELMASAUR_TAIL_Y];
+					int StartA = HelmasaurVars[HELMASAUR_TAIL_ANGLE];
+					int SwingWidth = Abs(CenterLinkX()-CenterX(this))+32;
+					HelmasaurVars[HELMASAUR_TAIL_COUNTER] = -1;
+					Game->PlaySound(SFX_HELMASAUR_TAIL_WHIP);
+					if(Side==1){
+						while(HelmasaurVars[HELMASAUR_TAIL_ANGLE]<60){
+							TailSpeed += 0.8;
+							HelmasaurVars[HELMASAUR_TAIL_ANGLE] += TailSpeed;
+							HelmasaurVars[HELMASAUR_TAIL_X] = VectorX(SwingWidth, HelmasaurVars[HELMASAUR_TAIL_ANGLE]);
+							HelmasaurVars[HELMASAUR_TAIL_Y] = 64+VectorY(96, HelmasaurVars[HELMASAUR_TAIL_ANGLE]);
+							HelmasaurVars[HELMASAUR_FORCE_TAIL_CURVE] = Side*Distance(HelmasaurVars[HELMASAUR_TAIL_X], HelmasaurVars[HELMASAUR_TAIL_Y], StartX, StartY)/8;
+							Helmasaur_Waitframe(this, ghost, Combo, HelmasaurVars, SavedDefenses);
+						}
+					}
+					else{
+						while(HelmasaurVars[HELMASAUR_TAIL_ANGLE]>-240){
+							TailSpeed -= 0.8;
+							HelmasaurVars[HELMASAUR_TAIL_ANGLE] += TailSpeed;
+							HelmasaurVars[HELMASAUR_TAIL_X] = VectorX(SwingWidth, HelmasaurVars[HELMASAUR_TAIL_ANGLE]);
+							HelmasaurVars[HELMASAUR_TAIL_Y] = 64+VectorY(96, HelmasaurVars[HELMASAUR_TAIL_ANGLE]);
+							HelmasaurVars[HELMASAUR_FORCE_TAIL_CURVE] = Side*Distance(HelmasaurVars[HELMASAUR_TAIL_X], HelmasaurVars[HELMASAUR_TAIL_Y], StartX, StartY)/8;
+							Helmasaur_Waitframe(this, ghost, Combo, HelmasaurVars, SavedDefenses);
+						}
+					}
+					TailSpeed = 0;
+					if(Side==1){
+						while(HelmasaurVars[HELMASAUR_TAIL_ANGLE]>StartA){
+							TailSpeed -= 0.8;
+							HelmasaurVars[HELMASAUR_TAIL_ANGLE] = Max(StartA, HelmasaurVars[HELMASAUR_TAIL_ANGLE] + TailSpeed);
+							HelmasaurVars[HELMASAUR_TAIL_X] = VectorX(SwingWidth, HelmasaurVars[HELMASAUR_TAIL_ANGLE]);
+							HelmasaurVars[HELMASAUR_TAIL_Y] = 64+VectorY(96, HelmasaurVars[HELMASAUR_TAIL_ANGLE]);
+							HelmasaurVars[HELMASAUR_FORCE_TAIL_CURVE] = Side*Distance(HelmasaurVars[HELMASAUR_TAIL_X], HelmasaurVars[HELMASAUR_TAIL_Y], StartX, StartY)/8;
+							Helmasaur_Waitframe(this, ghost, Combo, HelmasaurVars, SavedDefenses);
+						}
+						HelmasaurVars[HELMASAUR_TAIL_COUNTER] = 180;
+					}
+					else{
+						while(HelmasaurVars[HELMASAUR_TAIL_ANGLE]<StartA){
+							TailSpeed += 0.8;
+							HelmasaurVars[HELMASAUR_TAIL_ANGLE] = Min(StartA, HelmasaurVars[HELMASAUR_TAIL_ANGLE] + TailSpeed);
+							HelmasaurVars[HELMASAUR_TAIL_X] = VectorX(SwingWidth, HelmasaurVars[HELMASAUR_TAIL_ANGLE]);
+							HelmasaurVars[HELMASAUR_TAIL_Y] = 64+VectorY(96, HelmasaurVars[HELMASAUR_TAIL_ANGLE]);
+							HelmasaurVars[HELMASAUR_FORCE_TAIL_CURVE] = Side*Distance(HelmasaurVars[HELMASAUR_TAIL_X], HelmasaurVars[HELMASAUR_TAIL_Y], StartX, StartY)/8;
+							Helmasaur_Waitframe(this, ghost, Combo, HelmasaurVars, SavedDefenses);
+						}
+						HelmasaurVars[HELMASAUR_TAIL_COUNTER] = 0;
+					}
+					HelmasaurVars[HELMASAUR_FORCE_TAIL_CURVE] = -1000;
+				}
+				else if(Attack==2&&Ghost_Y<64&&CountFFCsRunning(FFCS_HELMASAUR_FIREBALL)==0){
+					Game->PlaySound(SFX_HELMASAUR_MOUTH);
+					for(int i=0; i<26; i++){
+						HelmasaurVars[HELMASAUR_MOUTH_COUNTER] += 0.5;
+						Helmasaur_Waitframe(this, ghost, Combo, HelmasaurVars, SavedDefenses);
+					}
+					int Args[8] = {Ghost_X+24, Ghost_Y+62, ghost->WeaponDamage};
+					RunFFCScript(FFCS_HELMASAUR_FIREBALL, Args);
+					for(int i=0; i<40; i++){
+						Helmasaur_Waitframe(this, ghost, Combo, HelmasaurVars, SavedDefenses);
+					}
+					for(int i=0; i<26; i++){
+						HelmasaurVars[HELMASAUR_MOUTH_COUNTER] -= 0.5;
+						Helmasaur_Waitframe(this, ghost, Combo, HelmasaurVars, SavedDefenses);
+					}
+				}
+				else{
+					Attack = 0;
+				}
+				if(Attack==0){
+					int TargetX = 96;
+					int TargetY = 24;
+					if(Ghost_Y==24){
+						int Target = Rand(0, 2);
+						if(Target==0){
+							TargetX = 96;
+							TargetY = 64;
+						}
+						else if(Target==1){
+							TargetX = 32;
+							TargetY = 48;
+						}
+						else if(Target==2){
+							TargetX = 160;
+							TargetY = 48;
+						}
+					}
+					int i = 0;
+					int Step = 1.2;
+					if(Rustled>1)Step = 1.5;
+					while(Distance(Ghost_X, Ghost_Y, TargetX, TargetY)>Step){
+						i++;
+						if(i%(16/Rustled)==0)Game->PlaySound(SFX_HELMASAUR_STEP);
+						HelmasaurVars[HELMASAUR_STEP_COUNTER] += 15*Rustled;
+						if(HelmasaurVars[HELMASAUR_STEP_COUNTER]>360)
+							HelmasaurVars[HELMASAUR_STEP_COUNTER] -= 360;
+						Ghost_MoveAtAngle(Angle(Ghost_X, Ghost_Y, TargetX, TargetY), Step, 0);
+						Helmasaur_Waitframe(this, ghost, Combo, HelmasaurVars, SavedDefenses);
+					}
+					Ghost_X = TargetX;
+					Ghost_Y = TargetY;
+				}
+				LastAttack = Attack;
+				AttackCooldown = HELMASAUR_ATTACK_COOLDOWN/Rustled;
+			}
+			Helmasaur_Waitframe(this, ghost, Combo, HelmasaurVars, SavedDefenses);
+		}
+	}
+}
+
+//Helmasaur Fireball Script
+ffc script Helmasaur_Fireballs{
+	void run(int X, int Y, int Damage){
+		eweapon Main = FireEWeapon(EW_SCRIPT10, X, Y, DegtoRad(90), 0, Damage, SPR_HELMASAUR_FIREBALL, SFX_FIREBALL, EWF_UNBLOCKABLE);
+		for(int i=0; i<30; i++){
+			Main->DeadState = -1;
+			Waitframe();
+		}
+		if(Main->isValid())
+			Main->Step = 200;
+		Waitframes(16);
+		if(Main->isValid())
+			Main->Step = 0;
+		Waitframes(10);
+		if(Main->isValid()){
+			eweapon Split[3];
+			int Offset = Choose(-90, 30, 150);
+			for(int i=0; i<3; i++){
+				Split[i] = FireEWeapon(EW_SCRIPT10, Main->X, Main->Y, DegtoRad(Offset+120*i), 200, Damage, SPR_HELMASAUR_FIREBALL, SFX_FIREBALL, EWF_UNBLOCKABLE);
+			}
+			Main->DeadState = 0;
+			Waitframes(24);
+			for(int i=0; i<3; i++){
+				if(Split[i]->isValid()){
+					Split[i]->Step = 0;
+				}
+			}
+			Waitframes(60);
+			for(int i=0; i<3; i++){
+				if(Split[i]->isValid()){
+					for(int j=0; j<4; j++){
+						eweapon e = FireEWeapon(EW_SCRIPT10, Split[i]->X, Split[i]->Y, DegtoRad(-45+90*j), 200, Damage, SPR_HELMASAUR_FIREBALL, SFX_FIREBALL, EWF_UNBLOCKABLE);
+						e->OriginalTile += 2;
+					}
+					Split[i]->DeadState = 0;
+					Waitframes(40);
+				}
+			}
+		}
+	}
+}
