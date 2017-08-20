@@ -26,16 +26,7 @@ ffc script Gibo{
 		eweapon ew;
 		int q;
 		npc Cores[10];
-		npc Cores[0];
-		npc Cores[1];
-		npc Cores[2];
-		npc Cores[3];
-		npc Cores[4];
-		npc Cores[5];
-		npc Cores[6];
-		npc Cores[7];
-		npc Cores[8];
-		npc Cores[9];
+		
 		int GiboCore;
 		if (AlternateGibo > 0) GiboCore = AlternateGibo;
 		else GiboCore = GiboNPC;
