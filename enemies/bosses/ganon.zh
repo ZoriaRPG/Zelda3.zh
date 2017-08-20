@@ -1,0 +1,478 @@
+//moosh
+
+const int STRING_GANON_ENTER = 3;
+const int STRING_GANON_DEATH = 4;
+const int SPR_EMPTY = 88;
+const int SPR_SPARK = 89;
+const int SPR_FIRE_BAT = 90;
+const int CMB_TRIDENT = 1870;
+const int CS_TRIDENT = 9;
+const int CS_GANON_FROZEN = 4;
+const int EW_FIRE_BAT = 39;
+const int EW_TRIDENT = 40;
+const int SFX_TRIDENT = 70;
+const int SFX_GANON_GLIDE = 69;
+const int SFX_FIRE_BAT = 71;
+const int SCRIPT_FIRE_SPIRAL = 2;
+const int GANON_TRUE_MAX_HP = 5;
+const int GANON_ADDED_HP = 50;
+
+const int GANON_TRIDENT_ACTIVE = 0;
+const int GANON_TRIDENT_X      = 1;
+const int GANON_TRIDENT_Y      = 2;
+const int GANON_TRIDENT_TX     = 3;
+const int GANON_TRIDENT_TY     = 4;
+const int GANON_TRIDENT_VX     = 5;
+const int GANON_TRIDENT_VY     = 6;
+const int GANON_TRIDENT_TIMER  = 7;
+const int GANON_TRUE_HP        = 8;
+
+ffc script Ganon{
+	void Ganon_Waitframe(ffc this, npc ghost, int GanonVars, int Combo, int Dir){
+		if(Ghost_HP<1){
+			Ghost_HP = 1;
+			int SavedCombo = Ghost_Data;
+			int SavedCSet = Ghost_CSet;
+			int SavedDefense[18];
+			for(int i=1; i<=Screen->NumEWeapons(); i++){
+				eweapon e = Screen->LoadEWeapon(i);
+				if(e->ID!=EW_FIRE)e->DeadState = 0;
+			}
+			for(int i=0; i<18; i++){
+				SavedDefense[i] = ghost->Defense[i];
+			}
+			for(int i=0; i<18; i++){
+				if(i==NPCD_ARROW&&(Link->Item[I_ARROW2]||Link->Item[I_ARROW3])){
+					ghost->Defense[i] = NPCDT_NONE;
+				}
+				else{
+					ghost->Defense[i] = NPCDT_IGNORE;
+				}
+			}
+			if(Dir==DIR_DOWN)Ghost_Data = Combo+4;
+			else if(Dir==DIR_UP)Ghost_Data = Combo+5;
+			Ghost_CSet = CS_GANON_FROZEN;
+			for(int i=0; i<120; i++){
+				if(Ghost_HP<1){
+					Ghost_HP = GANON_ADDED_HP;
+					GanonVars[GANON_TRUE_HP]--;
+					if(GanonVars[GANON_TRUE_HP]>0){
+						Ghost_StartFlashing();
+						break;
+					}
+					else{
+						Screen->Message(STRING_GANON_DEATH);
+						for(int j=1; j<=Screen->NumEWeapons(); j++){
+							eweapon e = Screen->LoadEWeapon(i);
+							e->DeadState = 0;
+						}
+						Ghost_Explode(this, ghost);
+						Quit();
+					}
+				}
+				if(GanonVars[GANON_TRIDENT_ACTIVE]>0){
+					GanonVars[GANON_TRIDENT_TIMER]++;
+					if(GanonVars[GANON_TRIDENT_TIMER]%16==0)Game->PlaySound(SFX_TRIDENT);
+					if(GanonVars[GANON_TRIDENT_X]<GanonVars[GANON_TRIDENT_TX])GanonVars[GANON_TRIDENT_VX] = Min(GanonVars[GANON_TRIDENT_VX]+0.1, 3);
+					else if(GanonVars[GANON_TRIDENT_X]>GanonVars[GANON_TRIDENT_TX])GanonVars[GANON_TRIDENT_VX] = Max(GanonVars[GANON_TRIDENT_VX]-0.1, -3);
+					if(GanonVars[GANON_TRIDENT_Y]<GanonVars[GANON_TRIDENT_TY])GanonVars[GANON_TRIDENT_VY] = Min(GanonVars[GANON_TRIDENT_VY]+0.1, 3);
+					else if(GanonVars[GANON_TRIDENT_Y]>GanonVars[GANON_TRIDENT_TY])GanonVars[GANON_TRIDENT_VY] = Max(GanonVars[GANON_TRIDENT_VY]-0.1, -3);
+					GanonVars[GANON_TRIDENT_X]+=GanonVars[GANON_TRIDENT_VX];
+					GanonVars[GANON_TRIDENT_Y]+=GanonVars[GANON_TRIDENT_VY];
+					if(GanonVars[GANON_TRIDENT_ACTIVE]==2&&GanonVars[GANON_TRIDENT_TIMER]%5==0){
+						eweapon e = FireEWeapon(EW_FIRE, GanonVars[GANON_TRIDENT_X]+Rand(8, 24), GanonVars[GANON_TRIDENT_Y]+Rand(8, 24), 0, 0, ghost->WeaponDamage, -1, 0, EWF_UNBLOCKABLE);
+					}
+					DrawTrident(ghost, GanonVars);
+				}
+				Ghost_Waitframe(this, ghost, false, false);
+			}
+			for(int i=0; i<18; i++){
+				ghost->Defense[i] = SavedDefense[i];
+			}
+			Ghost_Data = SavedCombo;
+			Ghost_CSet = SavedCSet;
+		}
+		Ghost_Waitframe(this, ghost, false, false);
+	}
+	void Ganon_Waitframes(ffc this, npc ghost, int GanonVars, int Combo, int Dir, int Frames){
+		for(int i=0; i<Frames; i++){
+			Ganon_Waitframe(this, ghost, GanonVars, Combo, Dir);
+		}
+	}
+	void DrawTrident(npc ghost, int GanonVars){
+		Screen->DrawCombo(3, GanonVars[GANON_TRIDENT_X], GanonVars[GANON_TRIDENT_Y], CMB_TRIDENT, 3, 3, CS_TRIDENT, -1, -1, 0, 0, 0, -1, 0, true, 128);
+		if(RectCollision(GanonVars[GANON_TRIDENT_X]+6, GanonVars[GANON_TRIDENT_Y]+6, GanonVars[GANON_TRIDENT_X]+42, GanonVars[GANON_TRIDENT_Y]+42, Link->X, Link->Y, Link->X+16, Link->Y+16)){
+			eweapon e = FireEWeapon(EW_TRIDENT, Link->X, Link->Y, 0, 0, ghost->WeaponDamage*2, SPR_EMPTY, 0, EWF_UNBLOCKABLE);
+			SetEWeaponLifespan(e, EWL_TIMER, 2);
+			SetEWeaponDeathEffect(e, EWD_VANISH, 0);
+		}
+	}
+	void run(int enemyid){
+		npc ghost = Ghost_InitAutoGhost(this, enemyid);
+		Ghost_SetFlag(GHF_IGNORE_ALL_TERRAIN);
+		int Combo = ghost->Attributes[10];
+		Ghost_Transform(this, ghost, Combo+1, ghost->CSet, 3, 3);
+		Ghost_SetHitOffsets(ghost, 8, 4, 4, 4);
+		Ghost_X = 108;
+		Ghost_Y = 24;
+		int InitHP = ghost->HP;
+		int Dir = DIR_DOWN;
+		int GanonVars[9];
+		GanonVars[GANON_TRUE_HP] = GANON_TRUE_MAX_HP;
+		int Counter = 0;
+		ghost->Defense[NPCD_ARROW] = NPCDT_IGNORE;
+		Screen->Message(STRING_GANON_ENTER);
+		while(true){
+			Counter++;
+			if(Counter%30==0){
+				int Attack;
+				if(Ghost_HP>InitHP/2&&GanonVars[GANON_TRUE_HP]==GANON_TRUE_MAX_HP){
+					Attack = Rand(0, 2);
+				}
+				else{
+					Attack = Rand(3, 5);
+				}
+				if(Attack==0){
+					if(Dir==DIR_DOWN){
+						Ghost_Data = Combo;
+						GanonVars[GANON_TRIDENT_X] = Ghost_X+18;
+						GanonVars[GANON_TRIDENT_Y] = Ghost_Y-12;
+					}
+					else if(Dir==DIR_UP){
+						Ghost_Data = Combo+2;
+						GanonVars[GANON_TRIDENT_X] = Ghost_X-18;
+						GanonVars[GANON_TRIDENT_Y] = Ghost_Y-12;
+					}
+					GanonVars[GANON_TRIDENT_VX] = 0;
+					GanonVars[GANON_TRIDENT_VY] = 0;
+					GanonVars[GANON_TRIDENT_TX] = Link->X-16;
+					GanonVars[GANON_TRIDENT_TY] = Link->Y-16;
+					GanonVars[GANON_TRIDENT_TIMER] = 0;
+					for(int i=0; i<40; i++){
+						GanonVars[GANON_TRIDENT_TIMER]++;
+						if(GanonVars[GANON_TRIDENT_TIMER]%16==0)Game->PlaySound(SFX_TRIDENT);
+						DrawTrident(ghost, GanonVars);
+						Ganon_Waitframe(this, ghost, GanonVars, Combo, Dir);
+					}
+					int TempAngle = Rand(-50, 50);
+					GanonVars[GANON_TRIDENT_VX] = VectorX(2, Angle(GanonVars[GANON_TRIDENT_X], GanonVars[GANON_TRIDENT_Y], GanonVars[GANON_TRIDENT_TX], GanonVars[GANON_TRIDENT_TY])+TempAngle);
+					GanonVars[GANON_TRIDENT_VY] = VectorY(2, Angle(GanonVars[GANON_TRIDENT_X], GanonVars[GANON_TRIDENT_Y], GanonVars[GANON_TRIDENT_TX], GanonVars[GANON_TRIDENT_TY])+TempAngle);
+					GanonVars[GANON_TRIDENT_ACTIVE] = 1;
+					for(int i=0; i<120; i++){
+						GanonVars[GANON_TRIDENT_TIMER]++;
+						if(GanonVars[GANON_TRIDENT_TIMER]%16==0)Game->PlaySound(SFX_TRIDENT);
+						if(GanonVars[GANON_TRIDENT_X]<GanonVars[GANON_TRIDENT_TX])GanonVars[GANON_TRIDENT_VX] = Min(GanonVars[GANON_TRIDENT_VX]+0.1, 3);
+						else if(GanonVars[GANON_TRIDENT_X]>GanonVars[GANON_TRIDENT_TX])GanonVars[GANON_TRIDENT_VX] = Max(GanonVars[GANON_TRIDENT_VX]-0.1, -3);
+						if(GanonVars[GANON_TRIDENT_Y]<GanonVars[GANON_TRIDENT_TY])GanonVars[GANON_TRIDENT_VY] = Min(GanonVars[GANON_TRIDENT_VY]+0.1, 3);
+						else if(GanonVars[GANON_TRIDENT_Y]>GanonVars[GANON_TRIDENT_TY])GanonVars[GANON_TRIDENT_VY] = Max(GanonVars[GANON_TRIDENT_VY]-0.1, -3);
+						GanonVars[GANON_TRIDENT_X]+=GanonVars[GANON_TRIDENT_VX];
+						GanonVars[GANON_TRIDENT_Y]+=GanonVars[GANON_TRIDENT_VY];
+						DrawTrident(ghost, GanonVars);
+						Ganon_Waitframe(this, ghost, GanonVars, Combo, Dir);
+					}
+					if(Dir==DIR_DOWN){
+						GanonVars[GANON_TRIDENT_TX] = Ghost_X+18;
+						GanonVars[GANON_TRIDENT_TY] = Ghost_Y-12;
+					}
+					else if(Dir==DIR_UP){
+						GanonVars[GANON_TRIDENT_TX] = Ghost_X-18;
+						GanonVars[GANON_TRIDENT_TY] = Ghost_Y-12;
+					}
+					while(Distance(GanonVars[GANON_TRIDENT_X], GanonVars[GANON_TRIDENT_Y], GanonVars[GANON_TRIDENT_TX], GanonVars[GANON_TRIDENT_TY])>16){
+						GanonVars[GANON_TRIDENT_TIMER]++;
+						if(GanonVars[GANON_TRIDENT_TIMER]%16==0)Game->PlaySound(SFX_TRIDENT);
+						if(GanonVars[GANON_TRIDENT_X]<GanonVars[GANON_TRIDENT_TX])GanonVars[GANON_TRIDENT_VX] = Min(GanonVars[GANON_TRIDENT_VX]+0.1, 3);
+						else if(GanonVars[GANON_TRIDENT_X]>GanonVars[GANON_TRIDENT_TX])GanonVars[GANON_TRIDENT_VX] = Max(GanonVars[GANON_TRIDENT_VX]-0.1, -3);
+						if(GanonVars[GANON_TRIDENT_Y]<GanonVars[GANON_TRIDENT_TY])GanonVars[GANON_TRIDENT_VY] = Min(GanonVars[GANON_TRIDENT_VY]+0.1, 3);
+						else if(GanonVars[GANON_TRIDENT_Y]>GanonVars[GANON_TRIDENT_TY])GanonVars[GANON_TRIDENT_VY] = Max(GanonVars[GANON_TRIDENT_VY]-0.1, -3);
+						GanonVars[GANON_TRIDENT_X]+=GanonVars[GANON_TRIDENT_VX]+VectorX(0.3, Angle(GanonVars[GANON_TRIDENT_X], GanonVars[GANON_TRIDENT_Y], GanonVars[GANON_TRIDENT_TX], GanonVars[GANON_TRIDENT_TY]));
+						GanonVars[GANON_TRIDENT_Y]+=GanonVars[GANON_TRIDENT_VY]+VectorY(0.3, Angle(GanonVars[GANON_TRIDENT_X], GanonVars[GANON_TRIDENT_Y], GanonVars[GANON_TRIDENT_TX], GanonVars[GANON_TRIDENT_TY]));
+						DrawTrident(ghost, GanonVars);
+						Ganon_Waitframe(this, ghost, GanonVars, Combo, Dir);
+					}
+					GanonVars[GANON_TRIDENT_ACTIVE] = 0;
+					if(Dir==DIR_DOWN)Ghost_Data = Combo+1;
+					else if(Dir==DIR_UP)Ghost_Data = Combo+3;
+				}
+				else if(Attack==1){
+					if(Dir==DIR_DOWN){
+						Ghost_Data = Combo;
+						GanonVars[GANON_TRIDENT_X] = Ghost_X+18;
+						GanonVars[GANON_TRIDENT_Y] = Ghost_Y-12;
+					}
+					else if(Dir==DIR_UP){
+						Ghost_Data = Combo+2;
+						GanonVars[GANON_TRIDENT_X] = Ghost_X-18;
+						GanonVars[GANON_TRIDENT_Y] = Ghost_Y-12;
+					}
+					GanonVars[GANON_TRIDENT_TIMER] = 0;
+					for(int i=0; i<30; i++){
+						GanonVars[GANON_TRIDENT_TIMER]++;
+						if(GanonVars[GANON_TRIDENT_TIMER]%16==0)Game->PlaySound(SFX_TRIDENT);
+						DrawTrident(ghost, GanonVars);
+						Ganon_Waitframe(this, ghost, GanonVars, Combo, Dir);
+					}
+					eweapon FireSpark[9];
+					for(int i=0; i<9; i++){
+						FireSpark[i] = FireEWeapon(EW_FIRE2, GanonVars[GANON_TRIDENT_X]+16+VectorX(24, 40*i), GanonVars[GANON_TRIDENT_Y]+16+VectorY(24, 40*i), 0, 0, ghost->WeaponDamage, SPR_SPARK, 0, EWF_UNBLOCKABLE);
+					}
+					for(int i=0; i<360; i++){
+						GanonVars[GANON_TRIDENT_TIMER]++;
+						if(GanonVars[GANON_TRIDENT_TIMER]%16==0)Game->PlaySound(SFX_TRIDENT);
+						for(int j=0; j<9; j++){
+							if(!FireSpark[j]->isValid()){
+								FireSpark[j] = FireEWeapon(EW_FIRE2, GanonVars[GANON_TRIDENT_X]+16+VectorX(56-32*Cos(i*1.2), 40*j+3*i), GanonVars[GANON_TRIDENT_Y]+16*VectorY(56-32*Cos(i*1.2), 40*j+3*i), 0, 0, ghost->WeaponDamage, SPR_SPARK, 0, EWF_UNBLOCKABLE);
+							}
+							FireSpark[j]->X = GanonVars[GANON_TRIDENT_X]+16+VectorX(56-32*Cos(i*1.2), 40*j+3*i);
+							FireSpark[j]->Y = GanonVars[GANON_TRIDENT_Y]+16+VectorY(56-32*Cos(i*1.2), 40*j+3*i);
+						}
+						DrawTrident(ghost, GanonVars);
+						Ganon_Waitframe(this, ghost, GanonVars, Combo, Dir);
+					}
+					if(Dir==DIR_DOWN)Ghost_Data = Combo+1;
+					else if(Dir==DIR_UP)Ghost_Data = Combo+3;
+					for(int i=0; i<=9; i++){
+						if(FireSpark[i]->isValid()){
+							Ganon_Waitframes(this, ghost, GanonVars, Combo, Dir, 10);
+							eweapon FireBat = FireBigAimedEWeapon(EW_FIRE2, FireSpark[i]->X-8, FireSpark[i]->Y, DegtoRad(Rand(-40, 40)), 80, ghost->WeaponDamage, SPR_FIRE_BAT, SFX_FIRE_BAT, EWF_UNBLOCKABLE, 2, 1);
+							SetEWeaponMovement(FireBat, EWM_VEER+AngleDir8(WrapDegrees(Angle(FireBat->X+8, FireBat->Y, Link->X, Link->Y)+Rand(-90, 90))), 0.05);
+							FireSpark[i]->DeadState = 0;
+						}
+					}
+				}
+				else if(Attack==2&&CountFFCsRunning(SCRIPT_FIRE_SPIRAL)<2){
+					eweapon FireBat = FireEWeapon(EW_FIRE2, Ghost_X+16, Ghost_Y+16, 0, 0, ghost->WeaponDamage, SPR_EMPTY, 0, EWF_UNBLOCKABLE);
+					FireBat->CollDetection = false;
+					SetEWeaponLifespan(FireBat, EWL_TIMER, 1);
+					SetEWeaponDeathEffect(FireBat, EWD_RUN_SCRIPT, SCRIPT_FIRE_SPIRAL);
+				}
+				else if(Attack==3){
+					if(Dir==DIR_DOWN){
+						Ghost_Data = Combo;
+						GanonVars[GANON_TRIDENT_X] = Ghost_X+18;
+						GanonVars[GANON_TRIDENT_Y] = Ghost_Y-12;
+					}
+					else if(Dir==DIR_UP){
+						Ghost_Data = Combo+2;
+						GanonVars[GANON_TRIDENT_X] = Ghost_X-18;
+						GanonVars[GANON_TRIDENT_Y] = Ghost_Y-12;
+					}
+					GanonVars[GANON_TRIDENT_VX] = 0;
+					GanonVars[GANON_TRIDENT_VY] = 0;
+					GanonVars[GANON_TRIDENT_TX] = Link->X-16;
+					GanonVars[GANON_TRIDENT_TY] = Link->Y-16;
+					GanonVars[GANON_TRIDENT_TIMER] = 0;
+					for(int i=0; i<40; i++){
+						GanonVars[GANON_TRIDENT_TIMER]++;
+						if(GanonVars[GANON_TRIDENT_TIMER]%16==0)Game->PlaySound(SFX_TRIDENT);
+						DrawTrident(ghost, GanonVars);
+						Ganon_Waitframe(this, ghost, GanonVars, Combo, Dir);
+					}
+					int TempAngle = Rand(-50, 50);
+					GanonVars[GANON_TRIDENT_VX] = VectorX(2, Angle(GanonVars[GANON_TRIDENT_X], GanonVars[GANON_TRIDENT_Y], GanonVars[GANON_TRIDENT_TX], GanonVars[GANON_TRIDENT_TY])+TempAngle);
+					GanonVars[GANON_TRIDENT_VY] = VectorY(2, Angle(GanonVars[GANON_TRIDENT_X], GanonVars[GANON_TRIDENT_Y], GanonVars[GANON_TRIDENT_TX], GanonVars[GANON_TRIDENT_TY])+TempAngle);
+					GanonVars[GANON_TRIDENT_ACTIVE] = 2;
+					for(int i=0; i<2; i++){
+						for(int j=0; j<120; j++){
+							GanonVars[GANON_TRIDENT_TIMER]++;
+							if(GanonVars[GANON_TRIDENT_TIMER]%16==0)Game->PlaySound(SFX_TRIDENT);
+							if(GanonVars[GANON_TRIDENT_X]<GanonVars[GANON_TRIDENT_TX])GanonVars[GANON_TRIDENT_VX] = Min(GanonVars[GANON_TRIDENT_VX]+0.1, 3);
+							else if(GanonVars[GANON_TRIDENT_X]>GanonVars[GANON_TRIDENT_TX])GanonVars[GANON_TRIDENT_VX] = Max(GanonVars[GANON_TRIDENT_VX]-0.1, -3);
+							if(GanonVars[GANON_TRIDENT_Y]<GanonVars[GANON_TRIDENT_TY])GanonVars[GANON_TRIDENT_VY] = Min(GanonVars[GANON_TRIDENT_VY]+0.1, 3);
+							else if(GanonVars[GANON_TRIDENT_Y]>GanonVars[GANON_TRIDENT_TY])GanonVars[GANON_TRIDENT_VY] = Max(GanonVars[GANON_TRIDENT_VY]-0.1, -3);
+							GanonVars[GANON_TRIDENT_X]+=GanonVars[GANON_TRIDENT_VX];
+							GanonVars[GANON_TRIDENT_Y]+=GanonVars[GANON_TRIDENT_VY];
+							if(GanonVars[GANON_TRIDENT_TIMER]%5==0){
+								eweapon e = FireEWeapon(EW_FIRE, GanonVars[GANON_TRIDENT_X]+Rand(8, 24), GanonVars[GANON_TRIDENT_Y]+Rand(8, 24), 0, 0, ghost->WeaponDamage, -1, 0, EWF_UNBLOCKABLE);
+							}
+							DrawTrident(ghost, GanonVars);
+							Ganon_Waitframe(this, ghost, GanonVars, Combo, Dir);
+						}
+						GanonVars[GANON_TRIDENT_TX] = Link->X-16;
+						GanonVars[GANON_TRIDENT_TY] = Link->Y-16;
+					}
+					if(Dir==DIR_DOWN){
+						GanonVars[GANON_TRIDENT_TX] = Ghost_X+18;
+						GanonVars[GANON_TRIDENT_TY] = Ghost_Y-12;
+					}
+					else if(Dir==DIR_UP){
+						GanonVars[GANON_TRIDENT_TX] = Ghost_X-18;
+						GanonVars[GANON_TRIDENT_TY] = Ghost_Y-12;
+					}
+					while(Distance(GanonVars[GANON_TRIDENT_X], GanonVars[GANON_TRIDENT_Y], GanonVars[GANON_TRIDENT_TX], GanonVars[GANON_TRIDENT_TY])>16){
+						GanonVars[GANON_TRIDENT_TIMER]++;
+						if(GanonVars[GANON_TRIDENT_TIMER]%16==0)Game->PlaySound(SFX_TRIDENT);
+						if(GanonVars[GANON_TRIDENT_X]<GanonVars[GANON_TRIDENT_TX])GanonVars[GANON_TRIDENT_VX] = Min(GanonVars[GANON_TRIDENT_VX]+0.1, 3);
+						else if(GanonVars[GANON_TRIDENT_X]>GanonVars[GANON_TRIDENT_TX])GanonVars[GANON_TRIDENT_VX] = Max(GanonVars[GANON_TRIDENT_VX]-0.1, -3);
+						if(GanonVars[GANON_TRIDENT_Y]<GanonVars[GANON_TRIDENT_TY])GanonVars[GANON_TRIDENT_VY] = Min(GanonVars[GANON_TRIDENT_VY]+0.1, 3);
+						else if(GanonVars[GANON_TRIDENT_Y]>GanonVars[GANON_TRIDENT_TY])GanonVars[GANON_TRIDENT_VY] = Max(GanonVars[GANON_TRIDENT_VY]-0.1, -3);
+						GanonVars[GANON_TRIDENT_X]+=GanonVars[GANON_TRIDENT_VX]+VectorX(0.3, Angle(GanonVars[GANON_TRIDENT_X], GanonVars[GANON_TRIDENT_Y], GanonVars[GANON_TRIDENT_TX], GanonVars[GANON_TRIDENT_TY]));
+						GanonVars[GANON_TRIDENT_Y]+=GanonVars[GANON_TRIDENT_VY]+VectorY(0.3, Angle(GanonVars[GANON_TRIDENT_X], GanonVars[GANON_TRIDENT_Y], GanonVars[GANON_TRIDENT_TX], GanonVars[GANON_TRIDENT_TY]));
+						if(GanonVars[GANON_TRIDENT_TIMER]%5==0){
+							eweapon e = FireEWeapon(EW_FIRE, GanonVars[GANON_TRIDENT_X]+Rand(8, 24), GanonVars[GANON_TRIDENT_Y]+Rand(8, 24), 0, 0, ghost->WeaponDamage, -1, 0, EWF_UNBLOCKABLE);
+						}
+						DrawTrident(ghost, GanonVars);
+						Ganon_Waitframe(this, ghost, GanonVars, Combo, Dir);
+					}
+					GanonVars[GANON_TRIDENT_ACTIVE] = 0;
+					if(Dir==DIR_DOWN)Ghost_Data = Combo+1;
+					else if(Dir==DIR_UP)Ghost_Data = Combo+3;
+				}
+				else if(Attack==4){
+					if(Dir==DIR_DOWN){
+						Ghost_Data = Combo;
+						GanonVars[GANON_TRIDENT_X] = Ghost_X+18;
+						GanonVars[GANON_TRIDENT_Y] = Ghost_Y-12;
+					}
+					else if(Dir==DIR_UP){
+						Ghost_Data = Combo+2;
+						GanonVars[GANON_TRIDENT_X] = Ghost_X-18;
+						GanonVars[GANON_TRIDENT_Y] = Ghost_Y-12;
+					}
+					GanonVars[GANON_TRIDENT_TIMER] = 0;
+					for(int i=0; i<30; i++){
+						GanonVars[GANON_TRIDENT_TIMER]++;
+						if(GanonVars[GANON_TRIDENT_TIMER]%16==0)Game->PlaySound(SFX_TRIDENT);
+						DrawTrident(ghost, GanonVars);
+						Ganon_Waitframe(this, ghost, GanonVars, Combo, Dir);
+					}
+					eweapon FireSparkOuter[9];
+					eweapon FireSparkInner[6];
+					for(int i=0; i<9; i++){
+						FireSparkOuter[i] = FireEWeapon(EW_FIRE2, GanonVars[GANON_TRIDENT_X]+16+VectorX(32, 40*i), GanonVars[GANON_TRIDENT_Y]+16+VectorY(32, 40*i), 0, 0, ghost->WeaponDamage, SPR_SPARK, 0, EWF_UNBLOCKABLE);
+					}
+					for(int i=0; i<6; i++){
+						FireSparkInner[i] = FireEWeapon(EW_FIRE2, GanonVars[GANON_TRIDENT_X]+16+VectorX(16, 60*i), GanonVars[GANON_TRIDENT_Y]+16+VectorY(16, 60*i), 0, 0, ghost->WeaponDamage, SPR_SPARK, 0, EWF_UNBLOCKABLE);
+					}
+					for(int i=0; i<360; i++){
+						GanonVars[GANON_TRIDENT_TIMER]++;
+						if(GanonVars[GANON_TRIDENT_TIMER]%16==0)Game->PlaySound(SFX_TRIDENT);
+						for(int j=0; j<9; j++){
+							if(!FireSparkOuter[j]->isValid()){
+								FireSparkOuter[j] = FireEWeapon(EW_FIRE2, GanonVars[GANON_TRIDENT_X]+16+VectorX(80-48*Cos(i*1.2), 40*j+3*i), GanonVars[GANON_TRIDENT_Y]+16+VectorY(80-48*Cos(i*1.2), 40*j+3*i), 0, 0, ghost->WeaponDamage, SPR_SPARK, 0, EWF_UNBLOCKABLE);
+							}
+							else{
+								FireSparkOuter[j]->X = GanonVars[GANON_TRIDENT_X]+16+VectorX(80-48*Cos(i*1.2), 40*j+3*i);
+								FireSparkOuter[j]->Y = GanonVars[GANON_TRIDENT_Y]+16+VectorY(80-48*Cos(i*1.2), 40*j+3*i);
+							}
+						}
+						for(int j=0; j<6; j++){
+							if(!FireSparkInner[j]->isValid()){
+								FireSparkInner[j] = FireEWeapon(EW_FIRE2, GanonVars[GANON_TRIDENT_X]+16+VectorX(48-32*Cos(i*1.6), 60*j-3*i), GanonVars[GANON_TRIDENT_Y]+16+VectorY(80-48*Cos(i*1.6), 60*j-3*i), 0, 0, ghost->WeaponDamage, SPR_SPARK, 0, EWF_UNBLOCKABLE);
+							}
+							else{
+								FireSparkInner[j]->X = GanonVars[GANON_TRIDENT_X]+16+VectorX(48-32*Cos(i*1.6), 60*j-3*i);
+								FireSparkInner[j]->Y = GanonVars[GANON_TRIDENT_Y]+16+VectorY(48-32*Cos(i*1.6), 60*j-3*i);
+							}
+						}
+						DrawTrident(ghost, GanonVars);
+						Ganon_Waitframe(this, ghost, GanonVars, Combo, Dir);
+					}
+					if(Dir==DIR_DOWN)Ghost_Data = Combo+1;
+					else if(Dir==DIR_UP)Ghost_Data = Combo+3;
+					for(int i=0; i<9; i++){
+						if(FireSparkOuter[i]->isValid()){
+							Ganon_Waitframes(this, ghost, GanonVars, Combo, Dir, 10);
+							eweapon FireBat = FireBigAimedEWeapon(EW_FIRE2, FireSparkOuter[i]->X-8, FireSparkOuter[i]->Y, DegtoRad(Rand(-40, 40)), 80, ghost->WeaponDamage, SPR_FIRE_BAT, SFX_FIRE_BAT, EWF_UNBLOCKABLE, 2, 1);
+							SetEWeaponMovement(FireBat, EWM_VEER+AngleDir8(WrapDegrees(Angle(FireBat->X+8, FireBat->Y, Link->X, Link->Y)+Rand(-90, 90))), 0.05);
+							FireSparkOuter[i]->DeadState = 0;
+						}
+					}
+					for(int i=0; i<6; i++){
+						if(FireSparkInner[i]->isValid()){
+							Ganon_Waitframes(this, ghost, GanonVars, Combo, Dir, 10);
+							eweapon FireBat = FireBigAimedEWeapon(EW_FIRE2, FireSparkInner[i]->X-8, FireSparkInner[i]->Y, DegtoRad(Rand(-40, 40)), 80, ghost->WeaponDamage, SPR_FIRE_BAT, SFX_FIRE_BAT, EWF_UNBLOCKABLE, 2, 1);
+							SetEWeaponMovement(FireBat, EWM_VEER+AngleDir8(WrapDegrees(Angle(FireBat->X+8, FireBat->Y, Link->X, Link->Y)+Rand(-90, 90))), 0.05);
+							FireSparkInner[i]->DeadState = 0;
+						}
+					}
+				}
+				else if(Attack==5&&CountFFCsRunning(SCRIPT_FIRE_SPIRAL)==0){
+					for(int i=0; i<3; i++){
+						eweapon FireBat = FireEWeapon(EW_FIRE2, Ghost_X+16, Ghost_Y+16, 0, 0, ghost->WeaponDamage, SPR_EMPTY, 0, EWF_UNBLOCKABLE);
+						FireBat->CollDetection = false;
+						SetEWeaponLifespan(FireBat, EWL_TIMER, 1);
+						SetEWeaponDeathEffect(FireBat, EWD_RUN_SCRIPT, SCRIPT_FIRE_SPIRAL);
+					}
+					Ganon_Waitframes(this, ghost, GanonVars, Combo, Dir, 60);
+				}
+				int GlideTargetX;
+				int GlideTargetY;
+				int TrailX[5];
+				int TrailY[5];
+				if(Dir==DIR_DOWN){
+					GlideTargetX = Rand(32, 176);
+					GlideTargetY = 96;
+				}
+				else if(Dir==DIR_UP){
+					GlideTargetX = Rand(32, 176);
+					GlideTargetY = 24;
+				}
+				for(int i=0; i<5; i++){
+					TrailX[i] = Ghost_X;
+					TrailY[i] = Ghost_Y;
+				}
+				int GlideAngle = Angle(Ghost_X, Ghost_Y, GlideTargetX, GlideTargetY);
+				int GlideDistance = Distance(Ghost_X, Ghost_Y, GlideTargetX, GlideTargetY);
+				Game->PlaySound(SFX_GANON_GLIDE);
+				for(int i=0; i<45; i++){
+					Ghost_MoveAtAngle(GlideAngle, GlideDistance/45, 0);
+					for(int j=0; j<5; j++){
+						if(i%4==0){
+							if(j==4){
+								TrailX[j] = Ghost_X;
+								TrailY[j] = Ghost_Y;
+							}
+							else{
+								TrailX[j] = TrailX[j+1];
+								TrailY[j] = TrailY[j+1];
+							}
+						}
+						Screen->DrawCombo(2, TrailX[j], TrailY[j], Ghost_Data, 3, 3, Ghost_CSet, -1, -1, 0, 0, 0, -1, 0, true, 64);
+					}
+					Ganon_Waitframe(this, ghost, GanonVars, Combo, Dir);
+				}
+				if(Dir==DIR_DOWN){
+					Dir = DIR_UP;
+					Ghost_Data = Combo+3;
+				}
+				else if(Dir==DIR_UP){
+					Dir = DIR_DOWN;
+					Ghost_Data = Combo+1;
+				}
+			}
+			Ganon_Waitframe(this, ghost, GanonVars, Combo, Dir);
+		}
+	}
+}
+ffc script Fire_Spiral{
+	void run(int wpn){
+		eweapon e = GetAssociatedEWeapon(wpn);
+		int SpiralCenterX = e->X;
+		int SpiralCenterY = e->Y;
+		int Damage = e->Damage;
+		e->DeadState = 0;
+		int BaseAngle = Rand(1, 360);
+		int SpiralSize = Rand(0.3, 1);
+		int SpiralSpeed = Rand(2, 4);
+		int SpiralDirection = Choose(-1, 1);
+		eweapon FireBat = FireBigEWeapon(EW_FIRE2, SpiralCenterX-8, SpiralCenterY, 0, 0, Damage, SPR_FIRE_BAT, SFX_FIRE_BAT, EWF_UNBLOCKABLE, 2, 1);
+		for(int i=0; i<360; i++){
+			if(!FireBat->isValid()){
+				this->Data = 0;
+				Quit();
+			}
+			else{
+				FireBat->X = SpiralCenterX-8+VectorX(SpiralSize*i, BaseAngle+SpiralSpeed*i*SpiralDirection);
+				FireBat->Y = SpiralCenterY+0.8*VectorY(SpiralSize*i, BaseAngle+SpiralSpeed*i*SpiralDirection);
+			}
+			if(i%10==0&&i>60){
+				eweapon e = FireEWeapon(EW_FIRE, FireBat->X+8, FireBat->Y, 0, 0, Damage, -1, -1, EWF_UNBLOCKABLE);
+			}
+			Waitframe();
+		}
+		FireBat->DeadState = 0;
+		this->Data = 0;
+		Quit();
+	}
+}
