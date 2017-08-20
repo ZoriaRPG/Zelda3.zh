@@ -1,0 +1,480 @@
+//mitsukara
+//Version 2
+
+// Replace these const int numbers with appropriate IDs for your own use.
+const int GiboNPC = 259; // default npc ID for Gibo. FFC argument D1 manually overrides this.
+const int GiboShell = 40; // type ID for eweapon the gibo will create and use as a shell. Defeault is EW_SCRIPT10
+const int GiboMove = 7; // npc->Misc number used for movement
+const int GiboSpawn = 8; // npc->Misc number used to spawn the shell
+const int GiboSprite = 188; // Weapon sprite for Gibo shell. Put two blank spaces, followed by two 2x2 animation frames to draw. Speed determines aniomation speed.
+const int GiboSpriteOrigTile = 12130; // The original tile of GiboSprite, used to identify the shell.
+const int GiboTracker = 10; // ew->Misc number used for the shell to track which npc is the core
+// If sprite 23 is not an appropriate "enemy death" animation in your quest, you may want to change that part also.
+
+const int GIBO_DEATH_SPRITE = 23;
+
+ffc script Gibo{
+	void run(int TransparentGibo, int AlternateGibo){
+		// D0 - set to 0 for opaque shells, any other number for transparent shells.
+		// D1 - Use a different NPC ID as your gibo core.
+
+		// This script can only track 10 gibos at a time, unless you alter it to include more.
+
+		// The core npc may be any enemy type and use any animation settings, but what I had in mind was NPCT_OTHERFLOAT, 4 frame animation, and "is flickering" flag checked. It will draw it's own tile over itself when it moves, which is supposed to make it stop flickering during movement. Other settings should work, but results may vary.
+
+		npc e;
+		eweapon ew;
+		int q;
+		npc Cores[10];
+		npc Cores[0];
+		npc Cores[1];
+		npc Cores[2];
+		npc Cores[3];
+		npc Cores[4];
+		npc Cores[5];
+		npc Cores[6];
+		npc Cores[7];
+		npc Cores[8];
+		npc Cores[9];
+		int GiboCore;
+		if (AlternateGibo > 0) GiboCore = AlternateGibo;
+		else GiboCore = GiboNPC;
+
+		Waitframes(24);
+
+		while(true){
+				
+
+			for(q = Screen->NumNPCs(); q > 0; q-- ){
+				e = Screen->LoadNPC(q);
+				if(!e->isValid()) continue;
+				if (e->isValid()){
+					if (e->ID == GiboCore){
+						if (e->DrawYOffset != 0) e->DrawYOffset = 0;
+						if (e->Misc[8] == 0) e->Misc[8] = 4;
+						if (e->Misc[8] > 2) e->Misc[8] --;
+						if (e->Misc[8] == 2){
+							eweapon GiboMommy = CreateEWeaponAt(GiboShell,e->X-8,e->Y-8);
+							GiboMommy->Damage = e->Damage;
+							GiboMommy->CSet = e->CSet;
+							GiboMommy->UseSprite(GiboSprite);
+							GiboMommy->HitWidth = 24;
+							GiboMommy->HitHeight = 24;
+							GiboMommy->HitXOffset = 4;
+							GiboMommy->HitYOffset = 4;
+							if (GiboMommy->Misc[GiboTracker] == 0 && !Cores[0]->isValid()){
+								Cores[0] = Screen->LoadNPC(q);
+								GiboMommy->Misc[GiboTracker] = 1;
+							}
+							if (GiboMommy->Misc[GiboTracker] == 0 && !Cores[1]->isValid()){
+								Cores[1] = Screen->LoadNPC(q);
+								GiboMommy->Misc[GiboTracker] = 2;
+							}
+							if (GiboMommy->Misc[GiboTracker] == 0 && !Cores[2]->isValid()){
+								Cores[2] = Screen->LoadNPC(q);
+								GiboMommy->Misc[GiboTracker] = 3;
+							}
+							if (GiboMommy->Misc[GiboTracker] == 0 && !Cores[3]->isValid()){
+								Cores[3] = Screen->LoadNPC(q);
+								GiboMommy->Misc[GiboTracker] = 4;
+							}
+							if (GiboMommy->Misc[GiboTracker] == 0 && !Cores[4]->isValid()){
+								Cores[4] = Screen->LoadNPC(q);
+								GiboMommy->Misc[GiboTracker] = 5;
+							}
+							if (GiboMommy->Misc[GiboTracker] == 0 && !Cores[5]->isValid()){
+								Cores[5] = Screen->LoadNPC(q);
+								GiboMommy->Misc[GiboTracker] = 6;
+							}
+							if (GiboMommy->Misc[GiboTracker] == 0 && !Cores[6]->isValid()){
+								Cores[6] = Screen->LoadNPC(q);
+								GiboMommy->Misc[GiboTracker] = 7;
+							}
+							if (GiboMommy->Misc[GiboTracker] == 0 && !Cores[7]->isValid()){
+								Cores[7] = Screen->LoadNPC(q);
+								GiboMommy->Misc[GiboTracker] = 8;
+							}
+							if (GiboMommy->Misc[GiboTracker] == 0 && !Cores[8]->isValid()){
+								Cores[8] = Screen->LoadNPC(q);
+								GiboMommy->Misc[GiboTracker] = 9;
+							}
+							if (GiboMommy->Misc[GiboTracker] == 0 && !Cores[9]->isValid()){
+								Cores[9] = Screen->LoadNPC(q);
+								GiboMommy->Misc[GiboTracker] = 10;
+							}
+							e->Misc[8] = 1;		
+						}
+						if (e->Misc[GiboMove] > 0){
+							e->Misc[GiboMove] --;
+							if (e->Misc[GiboMove] > 100 && e->HP > 0){
+								if (e->CollDetection == 0) e->CollDetection = 1;
+								Screen->FastTile(3,e->X+e->DrawXOffset,e->Y+e->DrawYOffset,e->Tile,e->CSet,128);
+								if (e->Dir == DIR_UP){
+									if (e->Y > 12 && Screen->ComboS[ComboAt(e->X+7,e->Y-1)] != 1111b) e->Y --;
+									else e->Dir = DIR_DOWN;
+								}
+								if (e->Dir == DIR_DOWN){
+									if (e->Y < 148 && Screen->ComboS[ComboAt(e->X+7,e->Y+17)] != 1111b) e->Y ++;
+									else e->Dir = DIR_UP;
+								}
+								if (e->Dir == DIR_LEFT){
+									if (e->X > 12 && Screen->ComboS[ComboAt(e->X-1,e->Y+8)] != 1111b) e->X --;
+									else e->Dir = DIR_RIGHT;
+								}
+								if (e->Dir == DIR_RIGHT){
+									if (e->X < 228 && Screen->ComboS[ComboAt(e->X+17,e->Y+8)] != 1111b) e->X ++;
+									else e->Dir = DIR_LEFT;
+								}
+								if (e->Dir == DIR_LEFTUP){
+									if (e->X > 12 && e->Y > 12 && Screen->ComboS[ComboAt(e->X-1,e->Y-1)] != 1111b){
+										e->X --;
+										e->Y --;
+									}
+									else e->Dir = DIR_RIGHTDOWN;
+								}
+								if (e->Dir == DIR_RIGHTUP){
+									if (e->X < 228 && e->Y > 12 && Screen->ComboS[ComboAt(e->X+17,e->Y-1)] != 1111b){
+										e->X ++;
+										e->Y --;
+									}
+									else e->Dir = DIR_RIGHTDOWN;
+								}
+								if (e->Dir == DIR_LEFTDOWN){
+									if (e->X > 12 && e->Y < 148 && Screen->ComboS[ComboAt(e->X-1,e->Y+17)] != 1111b){
+										e->X --;
+										e->Y ++;
+									}
+									else e->Dir = DIR_RIGHTUP;
+								}
+								if (e->Dir == DIR_RIGHTDOWN){
+									if (e->X < 228 && e->Y < 148 && Screen->ComboS[ComboAt(e->X+17,e->Y+17)] != 1111b){
+										e->X ++;
+										e->Y ++;
+									}
+									else e->Dir = DIR_LEFTUP;
+								}
+							}
+							else if (e->CollDetection != 0) e->CollDetection = 0;
+						}
+						else{
+							e->Misc[GiboMove] = 190;
+							e->Dir = Rand(7);
+						}
+					}
+				}
+			}
+
+			for(q = Screen->NumEWeapons(); q > 0; q--){
+				ew = Screen->LoadEWeapon(q);
+				if(!ew->isValid()) continue;
+				{
+					if (ew->OriginalTile == GiboSpriteOrigTile){
+			// First gibo
+						if (ew->Misc[GiboTracker] == 1){
+							if (Cores[0]->isValid()){
+								if (TransparentGibo == 0){
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[0]->CSet,-1,-1,0,0,0,0,1,128);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[0]->CSet,-1,-1,0,0,0,0,1,128);
+								}
+								else{
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[0]->CSet,-1,-1,0,0,0,0,1,64);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[0]->CSet,-1,-1,0,0,0,0,1,64);
+								}
+								ew->DeadState = WDS_ALIVE;
+								if (Cores[0]->Misc[GiboMove] < 100){
+									if (ew->X < Cores[0]->X-8) ew->X ++;
+									if (ew->X > Cores[0]->X-8) ew->X --;
+									if (ew->Y < Cores[0]->Y-8) ew->Y ++;
+									if (ew->Y > Cores[0]->Y-8) ew->Y --;
+								}
+								if (Cores[0]->HP <= 0){
+									lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+									DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+									Remove(ew);
+								}
+							}
+							else{
+								lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+								DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+								Remove(ew);
+							}
+						}
+			// Second gibo
+						if (ew->Misc[GiboTracker] == 2){
+							if (Cores[1]->isValid()){
+								if (TransparentGibo == 0){
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[1]->CSet,-1,-1,0,0,0,0,1,128);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[1]->CSet,-1,-1,0,0,0,0,1,128);
+								}
+								else{
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[1]->CSet,-1,-1,0,0,0,0,1,64);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[1]->CSet,-1,-1,0,0,0,0,1,64);
+								}
+								ew->DeadState = WDS_ALIVE;
+								if (Cores[1]->Misc[GiboMove] < 100){
+									if (ew->X < Cores[1]->X-8) ew->X ++;
+									if (ew->X > Cores[1]->X-8) ew->X --;
+									if (ew->Y < Cores[1]->Y-8) ew->Y ++;
+									if (ew->Y > Cores[1]->Y-8) ew->Y --;
+								}
+								if (Cores[1]->HP <= 0){
+									lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+									DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+									Remove(ew);
+								}
+							}
+							else{
+								lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+								DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+								Remove(ew);
+							}
+						}
+			// Third gibo
+						if (ew->Misc[GiboTracker] == 3){
+							if (Cores[2]->isValid()){
+								if (TransparentGibo == 0){
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[2]->CSet,-1,-1,0,0,0,0,1,128);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[2]->CSet,-1,-1,0,0,0,0,1,128);
+								}
+								else{
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[2]->CSet,-1,-1,0,0,0,0,1,64);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[2]->CSet,-1,-1,0,0,0,0,1,64);
+								}
+								ew->DeadState = WDS_ALIVE;
+								if (Cores[2]->Misc[GiboMove] < 100){
+									if (ew->X < Cores[2]->X-8) ew->X ++;
+									if (ew->X > Cores[2]->X-8) ew->X --;
+									if (ew->Y < Cores[2]->Y-8) ew->Y ++;
+									if (ew->Y > Cores[2]->Y-8) ew->Y --;
+								}
+								if (Cores[2]->HP <= 0){
+									lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+									DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+									Remove(ew);
+								}
+							}
+							else{
+								lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+								DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+								Remove(ew);
+							}
+						}
+			// Fourth gibo
+						if (ew->Misc[GiboTracker] == 4){
+							if (Cores[3]->isValid()){
+								if (TransparentGibo == 0){
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[3]->CSet,-1,-1,0,0,0,0,1,128);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[3]->CSet,-1,-1,0,0,0,0,1,128);
+								}
+								else{
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[3]->CSet,-1,-1,0,0,0,0,1,64);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[3]->CSet,-1,-1,0,0,0,0,1,64);
+								}
+								ew->DeadState = WDS_ALIVE;
+								if (Cores[3]->Misc[GiboMove] < 100){
+									if (ew->X < Cores[3]->X-8) ew->X ++;
+									if (ew->X > Cores[3]->X-8) ew->X --;
+									if (ew->Y < Cores[3]->Y-8) ew->Y ++;
+									if (ew->Y > Cores[3]->Y-8) ew->Y --;
+								}
+								if (Cores[3]->HP <= 0){
+									lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+									DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+									Remove(ew);
+								}
+							}
+							else{
+								lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+								DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+								Remove(ew);
+							}
+						}
+			// Fifth gibo
+						if (ew->Misc[GiboTracker] == 5){
+							if (Cores[4]->isValid()){
+								if (TransparentGibo == 0){
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[4]->CSet,-1,-1,0,0,0,0,1,128);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[4]->CSet,-1,-1,0,0,0,0,1,128);
+								}
+								else{
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[4]->CSet,-1,-1,0,0,0,0,1,64);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[4]->CSet,-1,-1,0,0,0,0,1,64);
+								}
+								ew->DeadState = WDS_ALIVE;
+								if (Cores[4]->Misc[GiboMove] < 100){
+									if (ew->X < Cores[4]->X-8) ew->X ++;
+									if (ew->X > Cores[4]->X-8) ew->X --;
+									if (ew->Y < Cores[4]->Y-8) ew->Y ++;
+									if (ew->Y > Cores[4]->Y-8) ew->Y --;
+								}
+								if (Cores[4]->HP <= 0){
+									lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+									DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+									Remove(ew);
+								}
+							}
+							else{
+								lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+								DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+								Remove(ew);
+							}
+						}
+			// Sixth gibo
+						if (ew->Misc[GiboTracker] == 6){
+							if (Cores[5]->isValid()){
+								if (TransparentGibo == 0){
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[5]->CSet,-1,-1,0,0,0,0,1,128);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[5]->CSet,-1,-1,0,0,0,0,1,128);
+								}
+								else{
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[5]->CSet,-1,-1,0,0,0,0,1,64);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[5]->CSet,-1,-1,0,0,0,0,1,64);
+								}
+								ew->DeadState = WDS_ALIVE;
+								if (Cores[5]->Misc[GiboMove] < 100){
+									if (ew->X < Cores[5]->X-8) ew->X ++;
+									if (ew->X > Cores[5]->X-8) ew->X --;
+									if (ew->Y < Cores[5]->Y-8) ew->Y ++;
+									if (ew->Y > Cores[5]->Y-8) ew->Y --;
+								}
+								if (Cores[5]->HP <= 0){
+									lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+									DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+									Remove(ew);
+								}
+							}
+							else{
+								lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+								DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+								Remove(ew);
+							}
+						}
+			// Seventh gibo
+						if (ew->Misc[GiboTracker] == 7){
+							if (Cores[6]->isValid()){
+								if (TransparentGibo == 0){
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[6]->CSet,-1,-1,0,0,0,0,1,128);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[6]->CSet,-1,-1,0,0,0,0,1,128);
+								}
+								else{
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[6]->CSet,-1,-1,0,0,0,0,1,64);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[6]->CSet,-1,-1,0,0,0,0,1,64);
+								}
+								ew->DeadState = WDS_ALIVE;
+								if (Cores[6]->Misc[GiboMove] < 100){
+									if (ew->X < Cores[6]->X-8) ew->X ++;
+									if (ew->X > Cores[6]->X-8) ew->X --;
+									if (ew->Y < Cores[6]->Y-8) ew->Y ++;
+									if (ew->Y > Cores[6]->Y-8) ew->Y --;
+								}
+								if (Cores[6]->HP <= 0){
+									lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+									DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+									Remove(ew);
+								}
+							}
+							else{
+								lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+								DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+								Remove(ew);
+							}
+						}
+			// Eighth gibo
+						if (ew->Misc[GiboTracker] == 8){
+							if (Cores[7]->isValid()){
+								if (TransparentGibo == 0){
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[7]->CSet,-1,-1,0,0,0,0,1,128);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[7]->CSet,-1,-1,0,0,0,0,1,128);
+								}
+								else{
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[7]->CSet,-1,-1,0,0,0,0,1,64);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[7]->CSet,-1,-1,0,0,0,0,1,64);
+								}
+								ew->DeadState = WDS_ALIVE;
+								if (Cores[7]->Misc[GiboMove] < 100){
+									if (ew->X < Cores[7]->X-8) ew->X ++;
+									if (ew->X > Cores[7]->X-8) ew->X --;
+									if (ew->Y < Cores[7]->Y-8) ew->Y ++;
+									if (ew->Y > Cores[7]->Y-8) ew->Y --;
+								}
+								if (Cores[7]->HP <= 0){
+									lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+									DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+									Remove(ew);
+								}
+							}
+							else{
+								lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+								DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+								Remove(ew);
+							}
+						}
+			// Ninth gibo
+						if (ew->Misc[GiboTracker] == 9){
+							if (Cores[8]->isValid()){
+								if (TransparentGibo == 0){
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[8]->CSet,-1,-1,0,0,0,0,1,128);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[8]->CSet,-1,-1,0,0,0,0,1,128);
+								}
+								else{
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[8]->CSet,-1,-1,0,0,0,0,1,64);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[8]->CSet,-1,-1,0,0,0,0,1,64);
+								}
+								ew->DeadState = WDS_ALIVE;
+								if (Cores[8]->Misc[GiboMove] < 100){
+									if (ew->X < Cores[8]->X-8) ew->X ++;
+									if (ew->X > Cores[8]->X-8) ew->X --;
+									if (ew->Y < Cores[8]->Y-8) ew->Y ++;
+									if (ew->Y > Cores[8]->Y-8) ew->Y --;
+								}
+								if (Cores[8]->HP <= 0){
+									lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+									DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+									Remove(ew);
+								}
+							}
+							else{
+								lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+								DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+								Remove(ew);
+							}
+						}
+			// Tenth gibo
+						if (ew->Misc[GiboTracker] == 10){
+							if (Cores[9]->isValid()){
+								if (TransparentGibo == 0){
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[9]->CSet,-1,-1,0,0,0,0,1,128);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[9]->CSet,-1,-1,0,0,0,0,1,128);
+								}
+								else{
+									if (ew->Tile == GiboSpriteOrigTile) Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+2, 2,2, Cores[9]->CSet,-1,-1,0,0,0,0,1,64);				
+									else Screen->DrawTile(3, ew->X, ew->Y, GiboSpriteOrigTile+4, 2,2, Cores[9]->CSet,-1,-1,0,0,0,0,1,64);
+								}
+								ew->DeadState = WDS_ALIVE;
+								if (Cores[9]->Misc[GiboMove] < 100){
+									if (ew->X < Cores[9]->X-8) ew->X ++;
+									if (ew->X > Cores[9]->X-8) ew->X --;
+									if (ew->Y < Cores[9]->Y-8) ew->Y ++;
+									if (ew->Y > Cores[9]->Y-8) ew->Y --;
+								}
+								if (Cores[9]->HP <= 0){
+									lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+									DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+									Remove(ew);
+								}
+							}
+							else{
+								lweapon DeathAnim = CreateLWeaponAt(LW_SPARKLE,ew->X+8,ew->Y+8);
+								DeathAnim->UseSprite(GIBO_DEATH_SPRITE);
+								Remove(ew);
+							}
+						}
+			//
+					}
+				}
+			}
+
+			Waitframe();
+		}
+	}
+}
