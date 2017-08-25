@@ -1,0 +1,22 @@
+tiles for lanmola is on page 242
+combos 12724 to 12736
+for Lanmola
+
+Weapon sprite 100 is the rock for lanmola boss
+
+all other setup is in the script file
+
+Moosh wrote the Lanmola script and i have his word to use it.
+Questfile is from Castchaos to me and ihave his word on to use it what
+ever i like.
+
+//Attributes:
+//A1: The ID of the NPC used for the tail
+//A2: The number of segments
+//A3: Pixels trimmed off the head's hitbox
+//A4: Pixels trimmed off the largest tail segment's hitbox
+//A5: Pixels trimmed off the medium tail segment's hitbox
+//A6: Pixels trimmed off the smallest tail segment's hitbox
+//A7: Sprite of the 8-way projectiles the enemy shoots when emerging (0 for no projectiles)
+
+Place Lanmola (body on screen and the script will take care of the rest

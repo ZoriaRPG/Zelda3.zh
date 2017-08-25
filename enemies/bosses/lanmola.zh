@@ -1,6 +1,6 @@
 //moosh
 
-const int CMB_LANMOLA_EMERGE = 892; //The first of three combos used for the dirt patch where the enemy emerges (small, medium, large)
+const int CMB_LANMOLA_EMERGE = 12724; //The first of three combos used for the dirt patch where the enemy emerges (small, medium, large)
 const int CS_LANMOLA_EMERGE = 3; //The CSet used for the dirt patch
 const int LANMOLA_MIN_RANGE = 2; //The minimum distance the lanmola will look to submerge from the point it emerges.
 const int LANMOLA_MAX_RANGE = 5; //The maximum distance the lanmola will look to submerge from the point it emerges.
