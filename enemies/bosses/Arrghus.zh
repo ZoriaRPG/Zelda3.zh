@@ -1,0 +1,226 @@
+const int SFX_LTTP_BOUNCE = 63;
+const int SFX_LTTP_BOMB = 64;
+const int SPR_SPLASH = 89;
+
+ffc script Arrghus{
+	void run(int enemyid){
+		int i; int j; int k;
+		npc ghost = Ghost_InitAutoGhost(this, enemyid);
+		int SummonID = ghost->Attributes[0];
+		int Combo = ghost->Attributes[10];
+		Ghost_Transform(this, ghost, GH_INVISIBLE_COMBO, -1, 2, 2);
+		Ghost_SetHitOffsets(ghost, 0, 0, 4, 4);
+		int Defenses[18];
+		Ghost_StoreDefenses(ghost, Defenses);
+		Ghost_SetAllDefenses(ghost, NPCDT_IGNORE);
+		npc Orbit[13];
+		for(i=0; i<13; i++){
+			Orbit[i] = CreateNPCAt(SummonID, Ghost_X+8, Ghost_Y+8);
+		}
+		int OrbitX[13];
+		int OrbitY[13];
+		int OrbitS[13];
+		int OrbitLastHP[13];
+		int OrbitFlashFrames[13];
+		int Vars[16] = {8, 0, 16, 0, 0, OrbitX, OrbitY, OrbitS, OrbitLastHP, OrbitFlashFrames};
+		while(OrbitValid(Orbit)){
+			for(i=0; i<3; i++){
+				int Angle = Angle(Ghost_X+8, Ghost_Y+8, Link->X, Link->Y);
+				for(j=0; j<60&&OrbitValid(Orbit); j++){
+					Vars[1] = WrapDegrees(Vars[1]+1);
+					Vars[3] = WrapDegrees(Vars[3]-1);
+					Arrghus_Waitframe(this, ghost, Orbit, Vars);
+				}
+				for(j=0; j<30&&OrbitValid(Orbit); j++){
+					Ghost_MoveAtAngle(Angle, 2, 0);
+					Vars[1] = WrapDegrees(Vars[1]+1);
+					Vars[3] = WrapDegrees(Vars[3]-1);
+					Arrghus_Waitframe(this, ghost, Orbit, Vars);
+				}
+			}
+			for(j=0; j<60&&OrbitValid(Orbit); j++){
+				Vars[1] = WrapDegrees(Vars[1]+1);
+				Vars[3] = WrapDegrees(Vars[3]-1);
+				Arrghus_Waitframe(this, ghost, Orbit, Vars);
+			}
+			for(j=0; j<40&&OrbitValid(Orbit); j++){
+				Vars[1] = WrapDegrees(Vars[1]+2);
+				Vars[3] = WrapDegrees(Vars[3]-2);
+				Vars[0] += 1.5;
+				Vars[2] += 1.5;
+				Arrghus_Waitframe(this, ghost, Orbit, Vars);
+			}
+			for(j=0; j<90&&OrbitValid(Orbit); j++){
+				Vars[1] = WrapDegrees(Vars[1]+4);
+				Vars[3] = WrapDegrees(Vars[3]-4);
+				Arrghus_Waitframe(this, ghost, Orbit, Vars);
+			}
+			for(j=0; j<40&&OrbitValid(Orbit); j++){
+				Vars[1] = WrapDegrees(Vars[1]+2);
+				Vars[3] = WrapDegrees(Vars[3]-2);
+				Vars[0] -= 1.5;
+				Vars[2] -= 1.5;
+				Arrghus_Waitframe(this, ghost, Orbit, Vars);
+			}
+		}
+		Ghost_Data = Combo;
+		Ghost_SetDefenses(ghost, Defenses);
+		while(true){
+			for(j=0; j<8; j++){
+				Ghost_Waitframe(this, ghost, 1, true);
+			}
+			int Vx = Choose(-ghost->Step/100, ghost->Step/100);
+			int Vy = Choose(-ghost->Step/100, ghost->Step/100);
+			i = 0;
+			while(!Ghost_GotHit()){
+				i = (i+1)%360;
+				if(i%10==0){
+					Game->PlaySound(SFX_SPLASH);
+				}
+				if(i%4==0){
+					eweapon splash;
+					splash = FireEWeapon(EW_SCRIPT9, Ghost_X, Ghost_Y+24, DegtoRad(-135), 400, 0, SPR_SPLASH, 0, 0);
+					splash->CollDetection = false;
+					SetEWeaponLifespan(splash, EWL_TIMER, 8);
+					SetEWeaponDeathEffect(splash, EWD_VANISH, 0);
+					splash = FireEWeapon(EW_SCRIPT9, Ghost_X+16, Ghost_Y+24, DegtoRad(-45), 400, 0, SPR_SPLASH, 0, 0);
+					splash->CollDetection = false;
+					splash->Flip = 1;
+					SetEWeaponLifespan(splash, EWL_TIMER, 8);
+					SetEWeaponDeathEffect(splash, EWD_VANISH, 0);
+				}
+				Ghost_MoveXY(Vx, Vy, 0);
+				if((Vx<0&&!Ghost_CanMove(DIR_LEFT, ghost->Step/100, 0))||(Vx>0&&!Ghost_CanMove(DIR_RIGHT, ghost->Step/100, 0)))
+					Vx = -Vx;
+				if((Vy<0&&!Ghost_CanMove(DIR_UP, ghost->Step/100, 0))||(Vy>0&&!Ghost_CanMove(DIR_DOWN, ghost->Step/100, 0)))
+					Vy = -Vy;
+				Ghost_Waitframe(this, ghost, 1, true);
+			}
+			Game->PlaySound(SFX_LTTP_BOUNCE);
+			for(i=0; i<64; i++){
+				Ghost_Z += 4;
+				Ghost_Jump = 0;
+				Ghost_Waitframe(this, ghost, 1, true);
+			}
+			Ghost_X = Rand(32, 192);
+			Ghost_Y = Rand(32, 112);
+			while(Distance(Ghost_X+8, Ghost_Y+8, Link->X, Link->Y)<24){
+				Ghost_X = Rand(32, 192);
+				Ghost_Y = Rand(32, 112);
+			}
+			Game->PlaySound(SFX_FALL);
+			while(Ghost_Z>0){
+				Ghost_Z -= 4;
+				Ghost_Jump = 0;
+				Ghost_Waitframe(this, ghost, 1, true);
+			}
+			Game->PlaySound(SFX_LTTP_BOMB);
+			Screen->Quake = 10;
+		}
+	}
+	bool OrbitValid(npc Orbit){
+		for(int i=0; i<13; i++){
+			if(Orbit[i]->isValid())
+				return true;
+		}
+		return false;
+	}
+	void Arrghus_Waitframe(ffc this, npc ghost, npc Orbit, int Vars){
+		int j;
+		int OrbitX = Vars[5];
+		int OrbitY = Vars[6];
+		int OrbitS = Vars[7];
+		int OrbitLastHP = Vars[8];
+		int OrbitFlashFrames = Vars[9];
+		Vars[4] = (Vars[4]+1)%360;
+		if(Link->HP>0){
+			Screen->DrawCombo(2, Ghost_X, Ghost_Y, ghost->Attributes[10], 2, 2, this->CSet, -1, -1, 0, 0, 0, -1, 0, true, 128);
+			for(int i=0; i<13; i++){
+				if(OrbitS[i]==0){
+					if(i<8){
+						OrbitX[i] = Ghost_X+8+VectorX(Vars[2]+4*Sin(Vars[4]*3+i*45+Vars[3]), i*45+Vars[3]);
+						OrbitY[i] = Ghost_Y+8+VectorY(Vars[2]+4*Sin(Vars[4]*3+i*45+Vars[3]), i*45+Vars[3]);
+					}
+					else{
+						OrbitX[i] = Ghost_X+8+VectorX(Vars[0]+4*Sin(Vars[4]*3+(i-8)*72+Vars[1]), (i-8)*72+Vars[1]);
+						OrbitY[i] = Ghost_Y+8+VectorY(Vars[0]+4*Sin(Vars[4]*3+(i-8)*72+Vars[1]), (i-8)*72+Vars[1]);
+					}
+					for(int j=1; j<=Screen->NumLWeapons()&&j<10; j++){
+						lweapon l = Screen->LoadLWeapon(j);
+						if(l->ID==LW_HOOKSHOT&&Collision(l, Orbit[i])&&l->Misc[15]==0){
+							l->DeadState = WDS_BOUNCE;
+							l->Misc[15] = 1;
+							OrbitX[i] = l->X;
+							OrbitY[i] = l->Y;
+							OrbitS[i] = 1;
+						}
+					}
+				}
+				else if(OrbitS[i]==1){
+					lweapon l;
+					for(int j=1; j<=Screen->NumLWeapons()&&j<10; j++){
+						l = Screen->LoadLWeapon(j);
+						if(l->ID==LW_HOOKSHOT){
+							break;
+						}
+					}
+					if(l->isValid()){
+						OrbitX[i] = l->X;
+						OrbitY[i] = l->Y;
+						if(Distance(OrbitX[i], OrbitY[i], Link->X, Link->Y)<18){
+							OrbitS[i] = 2;
+						}
+					}
+					else{
+						OrbitS[i] = 2;
+					}
+				}
+				else if(OrbitS[i]==2){
+					int TX;
+					int TY;
+					int X = OrbitX[i];
+					int Y = OrbitY[i];
+					if(i<8){
+						TX = Ghost_X+8+VectorX(Vars[2]+4*Sin(Vars[4]*3+i*45+Vars[3]), i*45+Vars[3]);
+						TY = Ghost_Y+8+VectorY(Vars[2]+4*Sin(Vars[4]*3+i*45+Vars[3]), i*45+Vars[3]);
+					}
+					else{
+						TX = Ghost_X+8+VectorX(Vars[0]+4*Sin(Vars[4]*3+(i-8)*72+Vars[1]), (i-8)*72+Vars[1]);
+						TY = Ghost_Y+8+VectorY(Vars[0]+4*Sin(Vars[4]*3+(i-8)*72+Vars[1]), (i-8)*72+Vars[1]);
+					}
+					OrbitX[i] += VectorX(0.75, Angle(X, Y, TX, TY));
+					OrbitY[i] += VectorY(0.75, Angle(X, Y, TX, TY));
+					if(Distance(OrbitX[i], OrbitY[i], TX, TY)<2){
+						OrbitS[i] = 0;
+					}
+				}
+				if(Orbit[i]->isValid()){
+					if(Orbit[i]->HP>0){
+						Orbit[i]->DrawYOffset = -1000;
+						if(OrbitFlashFrames[i]>0)
+							OrbitFlashFrames[i]--;
+						if(Orbit[i]->HP!=OrbitLastHP[i]){
+							if(OrbitLastHP[i]>0)
+								OrbitFlashFrames[i] = 32;
+							OrbitLastHP[i] = Orbit[i]->HP;
+						}
+						Orbit[i]->X = OrbitX[i];
+						Orbit[i]->Y = OrbitY[i];
+						int OrbitCombo = ghost->Attributes[10]+1;
+						if(OrbitX[i]<Link->X)
+							OrbitCombo++;
+						if(OrbitFlashFrames[i]>0)
+							Screen->FastCombo(2, OrbitX[i], OrbitY[i], OrbitCombo, 9-(OrbitFlashFrames[i]>>1), 128);
+						else
+							Screen->FastCombo(2, OrbitX[i], OrbitY[i], OrbitCombo, Ghost_CSet, 128);
+							
+					}
+					else{
+						Orbit[i]->DrawYOffset = -2;
+					}
+				}
+			}
+		}
+		Ghost_Waitframe(this, ghost);
+	}
+}
