@@ -1,0 +1,172 @@
+//Kholdstare Defaults when attributes are left at 0.
+const int KS_SHELL_LIFE		= 32; // Attr 1 //The HP of the shell. If this is 0 and attribute is 0 the enemy HP is used.
+const int KS_DINS_FIRE_KO	= 1;  // Attr 2 //In LttP using Bombos "Din's Fire" would destroy the shell. Set to 0 to disable if attribute is 0.
+const int KS_SHELL_CSET		= 2; // Attr 3 //The CSet used by the shell. ESP CSet by default.
+const int KS_DEATH_ANIMATION	= 1;  // Attr 4 //The death animation to use. 0 none, 1 flash and explode, 2 flicker and explode.
+
+//KS Constants
+const int KS_ICECHUNK_FALL_WAIT	= 64; //Frames between icechunks falling.
+const int KS_ICECHUNK_SPRITE	= 92; //Icechunk weapon sprite.
+const int KS_ICECHUNK_SOUND	= 38; //Fall SFX.
+const int KS_ICEFRAG_SPRITE	= 93; //When the icechunk hits the ground it splits into 4 in a x or + pattern.
+const int KS_ICEFRAG_SOUND	= 62; //Sound to use when the ice icechunk hits the ground.
+const int KS_TRAIL_SPRITE       = 91; //Kholdstare's Trail Sprite if 0 no trail will be drawn.
+const int KS_TRANS		= 128;//Transparency of the shell. By default this is not needed. 64 or 128 only!
+const int KS_SKITTER            = 63; //The sound to play when moving around.
+const int KS_STARTX		= 112;
+const int KS_STARTY		= 48;
+
+ffc script Kholdstare{
+    void run(int enemyID){
+        //Init
+        npc ghost = Ghost_InitAutoGhost(this,enemyID);
+        Ghost_Transform(this,ghost,-1,-1,2,2);
+        Ghost_SetFlag(GHF_4WAY);
+        Ghost_X = KS_STARTX;
+        Ghost_Y = KS_STARTY;
+        Ghost_SetPosition(this, ghost);
+        int deathanimation = Ghost_GetAttribute(ghost,3,KS_DEATH_ANIMATION);
+        int angle = 135;
+        int counter = 78;
+        float step=ghost->Step/100;
+        int haltrate = ghost->Haltrate;
+        //This is Just bad but these are unused by the dummy eyes.
+        int wCounter;
+        int wDamage = ghost->WeaponDamage;
+        if(ghost->Misc[0]==0){
+            int defenses[18];
+            Ghost_StoreDefenses(ghost, defenses);
+            KS_SetupDefenses(ghost,defenses);
+            ghost->HitXOffset = -24; ghost->HitWidth = 80;
+            ghost->HitYOffset = -16; ghost->HitHeight = 64;
+            int Shell_HP = Ghost_GetAttribute(ghost, 0, KS_SHELL_LIFE);
+              if(Shell_HP==0) Shell_HP = Ghost_HP; //Zero Constant fix
+            while(Shell_HP>0){
+                wCounter = IceFall(wCounter,wDamage);
+                Shell_HP = Shell_Waitframe(this,ghost,Shell_HP);
+            }
+            KS_Pissed(this,ghost,defenses);
+        }
+        else{
+            angle = 45;
+            Ghost_Data+=4;
+            Ghost_SetFlag(GHF_8WAY);
+            Ghost_SetFlag(GHF_REDUCED_KNOCKBACK);
+            Ghost_SetFlag(GHF_KNOCKBACK_4WAY);
+        }
+        bool halting;
+        float xStep=step*Cos(angle);
+        float yStep=step*Sin(angle);
+        Ghost_SetHitOffsets(ghost,0,0,0,0);
+        while(NumNPCsOf(enemyID)>0){
+            if(ghost==LoadNPCOf(enemyID)) ghost->SFX = KS_SKITTER;
+            if(ghost->Misc[0]==0) wCounter = IceFall(wCounter,wDamage);
+            Ghost_Dir = RadianAngleDir8(ArcTan(CenterLinkX()-(Ghost_X+16), CenterLinkY()-(Ghost_Y+16)));
+            //Halting
+            if(counter>0) counter--;
+            if(counter==0){
+                counter=128;
+                if(Rand(16)<haltrate && !halting) halting=true;
+                else if(halting){
+                    halting=false;
+                    angle=(Rand(4)*90)+45;
+                    float xStep=step*Cos(angle);
+                    float yStep=step*Sin(angle);
+                }
+            }
+            // Bounce
+            if(!halting){
+                if(xStep<0){
+                    if(!Ghost_CanMove(DIR_LEFT, -xStep, 3))
+                       xStep*=-1;
+                }
+                else{
+                    if(!Ghost_CanMove(DIR_RIGHT, xStep, 3))
+                       xStep*=-1;
+                }
+                
+                if(yStep<0){
+                    if(!Ghost_CanMove(DIR_UP, -yStep, 3))
+                       yStep*=-1;
+                }
+                else{
+                    if(!Ghost_CanMove(DIR_DOWN, yStep, 3))
+                       yStep*=-1;
+                }
+                Ghost_MoveXY(xStep, yStep, 3);
+                if(counter%4==0 && KS_TRAIL_SPRITE != 0){
+                    lweapon trail = CreateLWeaponAt(LW_SPARKLE, Ghost_X+8, Ghost_Y+8);
+                    trail->UseSprite(KS_TRAIL_SPRITE);
+                    trail->CollDetection=false;
+                    trail->Behind=true;
+                }
+            }
+            Ghost_Waitframe(this,ghost,deathanimation,false);
+        }
+        if(NumNPCsOf(enemyID)<=0) Quit();
+        else this->Data=1;
+    }
+    int IceFall(int wCounter,int wDamage){
+        wCounter = (wCounter+1) % KS_ICECHUNK_FALL_WAIT;
+        if(wCounter==0){
+            int flags = EWF_UNBLOCKABLE | EWF_SHADOW;
+            eweapon e = FireEWeapon(EW_SCRIPT1, Rand(32,208), Rand(32,128), 0, 0, wDamage*2,KS_ICECHUNK_SPRITE, KS_ICECHUNK_SOUND, flags);
+            SetEWeaponMovement(e, EWM_FALL, e->Y, EWMF_DIE);
+            int scriptname[] = "KholdstareIce";
+            int scriptnum = Game->GetFFCScript(scriptname);
+            SetEWeaponDeathEffect(e, EWD_RUN_SCRIPT, scriptnum);
+        }
+        return wCounter;
+    }
+    int Shell_Waitframe(ffc this, npc ghost, int shellHP){
+        //Draw the shell if Link is alive.
+        if(Link->HP>0)
+            Screen->DrawCombo(2,Ghost_X-24,Ghost_Y-16,Ghost_Data+3,5,4,Ghost_GetAttribute(ghost, 7, KS_SHELL_CSET),-1,-1,0,0,0,0,0,true,KS_TRANS);
+        //Check for collisions.
+        if(ghost->HP < Ghost_HP){
+            shellHP -= Ghost_HP-ghost->HP;
+            ghost->HP = Ghost_HP;
+        }
+        Ghost_GotHit();
+        Ghost_WaitframeLight(this,ghost); //Doesn't move or anything so yeah. We use Ghost_WaitframeLight here.
+        return shellHP;
+    }
+    void KS_Pissed(ffc this, npc ghost, int defenses){
+        Ghost_Dir=DIR_DOWN;
+        Ghost_Data+=4;
+        Ghost_SetFlag(GHF_8WAY);
+        Ghost_SetFlag(GHF_REDUCED_KNOCKBACK);
+        Ghost_SetFlag(GHF_KNOCKBACK_4WAY);
+        Game->PlaySound(SFX_EHIT);
+        Ghost_SetDefenses(ghost,defenses);
+        Ghost_Dir = RadianAngleDir8(ArcTan(CenterLinkX()-(Ghost_X+16), CenterLinkY()-(Ghost_Y+16)));
+        npc eyeball[2];
+        for(int i; i < 2; i++){
+            eyeball[i]=SpawnNPC(ghost->ID);
+            eyeball[i]->Misc[0]=1; //Prevents a brandnew kholdstare from being created.
+            Ghost_WaitframesLight(this, ghost, 16);          
+        }
+    }
+    void KS_SetupDefenses(npc ghost, int defenses){
+        Ghost_SetAllDefenses(ghost, NPCDT_BLOCK);
+        ghost->Defense[NPCD_FIRE] = defenses[NPCD_FIRE];
+        if(Link->Item[I_BOOK]) ghost->Defense[NPCD_MAGIC] = defenses[NPCD_MAGIC];
+        ghost->Defense[17] = defenses[17];
+    }
+}
+
+ffc script KholdstareIce{
+    void run(int weaponID){
+        eweapon wpn = GetAssociatedEWeapon(weaponID);
+        int offset = 45;
+        if(Rand(2)) offset=0;
+        for(int i=0; i < 4; i++){
+            float angle = DegtoRad(offset+(i*90));
+            eweapon e=FireEWeapon(EW_ROCK, wpn->X, wpn->Y, angle, 300, wpn->Damage, KS_ICEFRAG_SPRITE, 0, EWF_UNBLOCKABLE);
+            SetEWeaponMovement(e,EWM_THROW,1,EWMF_DIE);
+            SetEWeaponDeathEffect(e,EWD_VANISH, 0);
+        }
+        Game->PlaySound(KS_ICEFRAG_SOUND);
+        wpn->DeadState=WDS_DEAD;
+    }
+}
