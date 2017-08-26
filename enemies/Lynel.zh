@@ -1,0 +1,38 @@
+//Evan
+
+ffc script Lynel{
+	void run(int enemyID){
+		npc ghost = Ghost_InitAutoGhost(this, enemyID);
+		Ghost_Transform(this, ghost, -1, -1, 2, 2);
+		Ghost_SetHitOffsets(ghost, 2, 4, 6, 6);
+		Ghost_SetFlag(GHF_4WAY);
+		
+		int StandingCombo = ghost->Attributes[10];
+		int WalkingCombo = ghost->Attributes[10]+4;
+		int i;
+		int dirmod;
+		Ghost_Waitframes(this, ghost, true, true, Choose(30, 40, 60));
+		
+		while(true){
+			Ghost_Data=WalkingCombo;
+			for(i=0; i<150; i++){
+				if(Ghost_X+8>Link->X)dirmod=56; // Move to the right
+				else dirmod=-56;
+				Ghost_Dir = AngleDir4(Angle(Ghost_X+8, Ghost_Y+8, Link->X, Link->Y));
+				Ghost_MoveAtAngle(Angle(Ghost_X+8, Ghost_Y+8,  Link->X+dirmod, Link->Y), ghost->Step/100, 4);
+				if((Distance(Ghost_X+8, Ghost_Y+8, Link->X+dirmod, Link->Y)<3)&&(i>60))break;
+				else if(Distance(Ghost_X+8, Ghost_Y+8, Link->X, Link->Y)<32 && i>60)break;
+				Ghost_Waitframes(this, ghost, true, true, 1);
+			}
+			Ghost_Data = StandingCombo;
+			if(true){ //Don't worry about this if statement; it's a lazy retrofit of Inverse Mirror Lynels....
+				for(i=-1; i<=1; i++){
+					eweapon DMG = FireEWeapon(EW_FIRE2, Ghost_X+8, Ghost_Y+8, DegtoRad(dirToDeg(Ghost_Dir)+i*10), 200, ghost->WeaponDamage, -1, -1, 0);
+				}
+			}
+			
+			Ghost_Waitframes(this, ghost, true, true, Choose(40, 60, 80));
+			
+		}
+	}
+}

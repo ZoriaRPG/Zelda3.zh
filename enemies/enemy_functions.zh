@@ -1,0 +1,16 @@
+//Evan
+bool CanSeeLink(npc ghost, int Spread){
+	int Angle = Angle(CenterX(ghost), CenterY(ghost), CenterLinkX(), CenterLinkY());
+	if(Ghost_Dir==DIR_UP&&Angle>=-90-Spread/2&&Angle<=-90+Spread/2)return true;
+	else if(Ghost_Dir==DIR_DOWN&&Angle>=90-Spread/2&&Angle<=90+Spread/2)return true;
+	else if(Ghost_Dir==DIR_LEFT&&(Angle>=180-Spread/2||Angle<=-180+Spread/2))return true;
+	else if(Ghost_Dir==DIR_RIGHT&&Angle>=0-Spread/2&&Angle<=0+Spread/2)return true;
+	return false;
+}
+
+
+
+
+
+
+

@@ -1,0 +1,31 @@
+//Evan
+
+ffc script Taros{
+	void run(int enemyID){
+		npc ghost = Ghost_InitAutoGhost(this, enemyID);
+		Ghost_Transform(this, ghost, -1, -1, 2, 2);
+		Ghost_SetHitOffsets(ghost, 2, 7, 6, 6);
+		Ghost_SetFlag(GHF_4WAY);
+		Ghost_SetFlag(GHF_SET_DIRECTION);
+		Ghost_SetFlag(GHF_REDUCED_KNOCKBACK);
+		Ghost_SetFlag(GHF_STUN);
+		
+		bool Docile = true;
+		int MaxHP = Ghost_HP;
+		int Movecounter;
+		int Counter;
+		
+		while(Docile){
+			Counter++;
+			Movecounter = Ghost_ConstantWalk4(Movecounter, ghost->Step, ghost->Rate,ghost->Homing,0);
+			if(Ghost_HP!=MaxHP)Docile=false;
+			if(CanSeeLink(ghost, ghost->Attributes[0]) && Counter>120)Docile=false;
+			Ghost_Waitframes(this, ghost, true, true, 1);
+		}
+		Game->PlaySound(79);
+		while(true){
+			Ghost_MoveTowardLink(ghost->Step/100*1.5, 2);
+			Ghost_Waitframes(this, ghost, true, true, 1);
+		}
+	}
+}

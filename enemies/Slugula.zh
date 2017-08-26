@@ -1,0 +1,34 @@
+//Evan
+
+ffc script Slugula{
+	void run(int enemyID){
+		npc ghost = Ghost_InitAutoGhost(this, enemyID);
+		Ghost_SetFlag(GHF_4WAY);
+		Ghost_SetFlag(GHF_SET_DIRECTION);
+		Ghost_SetFlag(GHF_REDUCED_KNOCKBACK);
+		Ghost_SetFlag(GHF_STUN);
+		
+		int Movecounter;
+		
+		while(true){
+			Movecounter = Ghost_HaltingWalk4(Movecounter, ghost->Step, ghost->Rate,ghost->Homing,0, ghost->Haltrate, 32);
+			if(Movecounter==10){
+				eweapon Bomb=FireAimedEWeapon(EW_SCRIPT3, ghost->X, ghost->Y, DegtoRad(0), 0, ghost->WeaponDamage, 76, 21, 0);
+				Bomb->CollDetection=false;
+				Bomb->DeadState=ghost->Attributes[0];
+			}
+			SlugulaWaitframe(this, ghost);
+		}
+	}
+	void SlugulaWaitframe(ffc this, npc ghost){
+		for(int i=1; i<=Screen->NumEWeapons(); i++){
+			eweapon wpn = Screen->LoadEWeapon(i);
+			if(wpn->ID==EW_SCRIPT3 && wpn->DeadState==2){
+				FireAimedEWeapon(EW_BOMBBLAST, wpn->X, wpn->Y, DegtoRad(0), 0, ghost->WeaponDamage, -1, -1, EWF_UNBLOCKABLE);
+				wpn->DeadState=WDS_DEAD;
+				wpn->Y=1000;
+			}
+		}
+		Ghost_Waitframe(this, ghost, true, true);
+	}
+}

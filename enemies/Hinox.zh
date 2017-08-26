@@ -1,0 +1,32 @@
+//Evan
+
+ffc script Hinox{
+	void run(int enemyID){
+		npc ghost = Ghost_InitAutoGhost(this, enemyID);
+		Ghost_Transform(this, ghost, -1, -1, 2, 2);
+		Ghost_SetHitOffsets(ghost, 2, 3, 6, 6);
+		Ghost_SetFlag(GHF_4WAY);
+		
+		int Movecounter;
+		int StandingCombo = ghost->Attributes[10];
+		int WalkingCombo = ghost->Attributes[10]+4;
+		
+		while(true){
+			Ghost_Data = WalkingCombo;
+			int WalkDur = Choose(120, 180, 240);
+			for(int i=0; i<WalkDur; i++){
+				Movecounter = Ghost_ConstantWalk4(Movecounter, ghost->Step, ghost->Rate,ghost->Homing,0);
+				Ghost_Waitframes(this, ghost, true, true, 1);
+			}
+			Ghost_Data = StandingCombo;
+			Ghost_Dir = AngleDir4(Angle(Ghost_X+8, Ghost_Y+8, Link->X, Link->Y));
+			Ghost_Waitframes(this, ghost, true, true, 40);
+			
+			eweapon Bombthrow=FireAimedEWeapon(EW_BOMB, ghost->X+8, ghost->Y, DegtoRad(Rand(-10,10)), 200, ghost->WeaponDamage, -1, -1, EWF_SHADOW);
+			SetEWeaponMovement(Bombthrow, EWM_THROW, -1, EWMF_DIE);
+			SetEWeaponDeathEffect(Bombthrow, EWD_EXPLODE, ghost->WeaponDamage);
+			
+			Ghost_Waitframes(this, ghost, true, true, 40);
+		}
+	}
+}

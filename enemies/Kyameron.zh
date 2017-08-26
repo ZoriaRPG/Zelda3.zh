@@ -1,0 +1,95 @@
+//Evan
+
+ffc script Kyameron{
+	void run(int enemyID){
+		npc ghost = Ghost_InitAutoGhost(this, enemyID);
+		
+		Ghost_Data = GH_INVISIBLE_COMBO;
+		
+		Ghost_SetFlag(GHF_IGNORE_WATER);
+		
+		
+		
+		while(true){
+			ghost->CollDetection = false;
+			Ghost_Waitframes(this, ghost, true, true, Choose(40, 60, 80, 120));
+			
+			int teleX;
+			int teleY;
+			int count = 0;
+			bool reroll = true;
+			while(reroll){
+				teleX = GridX(Rand(16,240));
+				teleY = GridY(Rand(16,160));
+				if(Screen->ComboT[ComboAt(teleX+8, teleY+8)]== 3) reroll = false; //Find Water Combos
+				if(Screen->ComboT[ComboAt(teleX+8, teleY+8)]== 58) reroll = false;
+				if(Distance(teleX+8, teleY+8, Link->X+8, Link->Y+8)<24) reroll = true;
+				count++;
+				if(count%100==0 && count>0){ //If something goes wrong, lets not hang ZC.
+					Ghost_Waitframe(this, ghost, true, true);
+					count=0;
+				}
+			}
+			Ghost_X = teleX;
+			Ghost_Y = teleY;
+			
+			Game->PlaySound(80);
+			Ghost_Data=ghost->Attributes[10];
+			Ghost_Waitframes(this, ghost, true, true, 8);
+			Ghost_Data=ghost->Attributes[10]+1;
+			Ghost_Waitframes(this, ghost, true, true, 8);
+			Ghost_Data=ghost->Attributes[10]+2;
+			Ghost_Waitframes(this, ghost, true, true, 8);
+			Ghost_Data=ghost->Attributes[10]+3;
+			ghost->CollDetection = true;
+			Ghost_Waitframes(this, ghost, true, true, 8);
+			Ghost_Data=ghost->Attributes[10]+4;
+			
+			int Bounces = 12;
+			
+			float step;
+			float xStep;
+			float yStep;
+			
+			int angle=45+90*Rand(4);
+			step = 2.5;
+			
+			xStep=step*Cos(angle);
+			yStep=step*Sin(angle);
+			
+			while(Bounces>0){
+				if(xStep<0){
+					if(!Ghost_CanMove(DIR_LEFT, -xStep, 3)){
+						xStep*=-1;
+						Bounces--;
+					}
+				}
+				else{
+					if(!Ghost_CanMove(DIR_RIGHT, xStep, 3)){
+						xStep*=-1;
+						Bounces--;
+					}
+				}
+				if(yStep<0){
+					if(!Ghost_CanMove(DIR_UP, -yStep, 3)){
+						yStep*=-1;
+						Bounces--;
+					}
+				}
+				else{
+					if(!Ghost_CanMove(DIR_DOWN, yStep, 3)){
+						yStep*=-1;
+						Bounces--;
+					}
+				}
+				Ghost_MoveXY(xStep, yStep, 3);
+				Ghost_Waitframe(this, ghost, true, true);
+			}
+			ghost->CollDetection = false;
+			Ghost_Data=GH_INVISIBLE_COMBO;
+			Ghost_Waitframes(this, ghost, true, true, Choose(40, 60, 80, 120));
+			
+		}
+	}
+}
+

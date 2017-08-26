@@ -1,0 +1,33 @@
+//Evan
+ffc script Zazak{
+	void run(int enemyID){
+		npc ghost = Ghost_InitAutoGhost(this, enemyID);
+		Ghost_Transform(this, ghost, -1, -1, 2, 2);
+		Ghost_SetHitOffsets(ghost, 6, 4, 7, 7);
+		Ghost_SetFlag(GHF_4WAY);
+		Ghost_SetFlag(GHF_REDUCED_KNOCKBACK);
+		Ghost_SetFlag(GHF_STUN);
+		
+		int Type = ghost->Attributes[0];
+		int ShotCooldown = Choose(30, 50, 70);
+		int StandingCombo = ghost->Attributes[10];
+		int WalkingCombo = ghost->Attributes[10]+4;
+		
+		int Movecounter=-1;
+		
+		while(true){
+			Movecounter = Ghost_HaltingWalk4(Movecounter, ghost->Step, ghost->Rate,ghost->Homing,0, ghost->Haltrate, 48);
+			if(Movecounter>1){
+				Ghost_Data = StandingCombo;
+			}
+			else Ghost_Data = WalkingCombo;
+			
+			if(ShotCooldown>0)ShotCooldown--;
+			if(CanSeeLink(ghost, 20) && ShotCooldown==0 && Type>0){
+				ShotCooldown = Choose(30, 50, 70);
+				eweapon DMG = FireEWeapon(EW_BEAM, Ghost_X+8, Ghost_Y+8, DegtoRad(dirToDeg(Ghost_Dir)), 250, ghost->WeaponDamage, -1, 40, EWF_ROTATE);
+			}
+			Ghost_Waitframes(this, ghost, true, true, 1);
+		}
+	}
+}
