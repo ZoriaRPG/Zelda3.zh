@@ -1,0 +1,270 @@
+//ywkls
+//import "std.zh"
+//import "string.zh"
+//import "ffcscript.zh"
+
+//Uses to make a boss using the Gen_Explode_Waitframe wait for a certain number of frames before doing something.
+
+void Gen_Explode_Waitframes(ffc this, npc ghost,int frames){
+	for(;frames>0;frames--){
+		Gen_Explode_Waitframe(this,ghost);
+	}
+}    
+                   
+//A general utility function to make a boss explode on death.
+
+void Gen_Explode_Waitframe(ffc this, npc ghost){
+     if(!Ghost_Waitframe(this, ghost, false, false)){
+	   Ghost_DeathAnimation(this, ghost, 2);
+	   Quit();
+     }
+}
+
+global script globalscript{
+    void run(){
+         StartGhostZH();
+         while(true){
+              UpdateGhostZH1();
+              Waitdraw();
+              UpdateGhostZH2();
+              Waitframe();
+         }
+    }
+}
+
+const int SPR_MOTHULA_WEAPON = 45;//Sprite of Mothula fireballs.
+const int SFX_MOTHULA_FIRE = 76;//Sound made when Mothula fires.
+const int SFX_MOTHULA_FLUTTER = 77;//Sound made when Mothula fires.
+
+ffc script Mothula{
+	void run(int enemyID){
+		npc ghost = Ghost_InitAutoGhost(this, enemyID);
+		int combo = ghost->Attributes[10];//Remember combo.
+		//Set up boss size and appearance.
+		Ghost_Transform(this,ghost,-1,-1,4,2);
+		Ghost_Data = combo;
+		//Regulates rate of fire.
+		int FireTimer = Rand(90,210);
+		eweapon ring[3];//Some eweapons we can use.
+		float angle;//Handles movement of boss.
+		int direction = Choose(1,-1);//Randomize which way boss moves.
+		//Position boss.
+		Ghost_X = 78;
+		Ghost_Y = 64;
+		//Remember position of boss.
+		int Start_X = Ghost_X+32;
+		int Start_Y = Ghost_Y+16;
+		//Choose which way boss moves.
+		int MovePattern = Choose(0,1,2);
+		float weapon_angle;//Handles weapon aiming.
+		int i;//Iterative variable.
+		//Set flags.
+		Ghost_SetFlag(GHF_IGNORE_ALL_TERRAIN);
+		Ghost_SetFlag(GHF_IGNORE_SOLIDITY);
+		while(true){
+			//Keep boss always moving.
+			angle = (angle+direction)%360;
+			//Circular movement.
+			if(MovePattern ==0){
+				Ghost_X = Start_X + 32 * Cos(angle);
+				Ghost_Y = Start_Y + 32 * Sin(angle);
+			}
+			//Horizontal figure 8.
+			else if(MovePattern ==1){
+				Ghost_X = Start_X + 64 * Cos(angle);
+				Ghost_Y = Start_Y + 32 * Sin(2*angle);
+			}
+			//Vertical figure 8.
+			else if(MovePattern == 2){
+				Ghost_X = Start_X + 32 * Cos(2*angle);
+				Ghost_Y = Start_Y + 64 * Sin(angle);
+			}
+			//Time to fire.
+			if(FireTimer<0){
+				//Aim at Link.
+				weapon_angle = RadianAngle(Ghost_X + 32, Ghost_Y + 16, Link->X + 8, Link->Y + 8);
+				//Offset each fire ball by 45 degrees.
+				ring[0] = FireEWeapon(EW_FIRE2, Ghost_X + 32, Ghost_Y + 16, weapon_angle, 200, ghost->WeaponDamage, SPR_MOTHULA_WEAPON, SFX_MOTHULA_FIRE, EWF_UNBLOCKABLE);
+				ring[1] = FireEWeapon(EW_FIRE2, Ghost_X + 32, Ghost_Y + 16, weapon_angle-DegtoRad(15), 200, ghost->WeaponDamage, SPR_MOTHULA_WEAPON, SFX_MOTHULA_FIRE, EWF_UNBLOCKABLE);
+				ring[2] = FireEWeapon(EW_FIRE2, Ghost_X + 32, Ghost_Y + 16, weapon_angle+DegtoRad(15), 200, ghost->WeaponDamage, SPR_MOTHULA_WEAPON, SFX_MOTHULA_FIRE, EWF_UNBLOCKABLE);			
+				//Set up fireball properties.
+				for(i=0;i<=2;i++){
+					SetEWeaponLifespan(ring[i],EWL_TIMER, 90);
+					SetEWeaponMovement(ring[i], EWM_SINE_WAVE, 8, 4);
+					SetEWeaponDeathEffect(ring[i], EWD_EXPLODE, ghost->WeaponDamage); 
+				}
+				//Wait a bit.
+				Gen_Explode_Waitframes(this,ghost,15);
+				Ghost_Data = GH_INVISIBLE_COMBO;
+				ghost->CollDetection = false;
+				Game->PlaySound(SFX_MOTHULA_FLUTTER);
+				for(i= 0;i<=64;i++){
+					Screen->DrawCombo(3, Ghost_X, Ghost_Y-i, combo, 4, 2, Ghost_CSet, -1, -1, 0, 0, 0, -1, 0, true, OP_OPAQUE);
+					Gen_Explode_Waitframe(this,ghost);
+				}
+				FireTimer = Rand(90,210);//Reset fire timer.
+				MovePattern = Choose(0,1,2);//Choose new movement pattern.
+				//Circular movement.
+				if(MovePattern ==0){
+					Ghost_X = Start_X + 32 * Cos(angle);
+					Ghost_Y = Start_Y + 32 * Sin(angle);
+				}
+				//Horizontal figure 8.
+				else if(MovePattern ==1){
+					Ghost_X = Start_X + 64 * Cos(angle);
+					Ghost_Y = Start_Y + 32 * Sin(2*angle);
+				}
+				//Vertical figure 8.
+				else if(MovePattern == 2){
+					Ghost_X = Start_X + 32 * Cos(2*angle);
+					Ghost_Y = Start_Y + 64 * Sin(angle);
+				}
+				Game->PlaySound(SFX_MOTHULA_FLUTTER);
+				for(i= 64;i>0;i--){
+					Screen->DrawCombo(3, Ghost_X, Ghost_Y-i, combo, 4, 2, Ghost_CSet, -1, -1, 0, 0, 0, -1, 0, true, OP_OPAQUE);
+					Gen_Explode_Waitframe(this,ghost);
+				}
+				Ghost_Data = combo;
+				ghost->CollDetection = true;
+				direction = Choose(1,-1);//Choose new direction of movement.
+			}
+			FireTimer--;//Reduce timer.
+			Gen_Explode_Waitframe(this,ghost);
+		}
+	}
+}
+
+// Section 8. ghost.zh
+// Version 2.7.2
+
+// See ghost.txt for documentation.
+
+// Standard settings -----------------------------------------------------------
+
+// Small (1x1) shadow settings
+const int GH_SHADOW_TILE = 27400;
+const int GH_SHADOW_CSET = 7;
+const int GH_SHADOW_FRAMES = 4;
+const int GH_SHADOW_ANIM_SPEED = 8;
+const int GH_SHADOW_TRANSLUCENT = 1; // 0 = No, 1 = Yes
+const int GH_SHADOW_FLICKER = 0; // 0 = No, 1 = Yes
+
+// Large (2x2) shadow settings
+// If GH_LARGE_SHADOW_TILE is 0, large shadows will be disabled
+const int GH_LARGE_SHADOW_TILE = 27392; // Top-left corner
+const int GH_LARGE_SHADOW_CSET = 7;
+const int GH_LARGE_SHADOW_FRAMES = 4;
+const int GH_LARGE_SHADOW_ANIM_SPEED = 8;
+const int GH_LARGE_SHADOW_MIN_WIDTH = 3; // Enemies must be at least this wide
+const int GH_LARGE_SHADOW_MIN_HEIGHT = 3; // and this high to use large shadows
+
+// AutoGhost settings
+const int AUTOGHOST_MIN_FFC = 1; // Min: 1, Max: 32
+const int AUTOGHOST_MAX_FFC = 32; // Min: 1, Max: 32
+const int AUTOGHOST_MIN_ENEMY_ID = 20; // Min: 20, Max: 511
+const int AUTOGHOST_MAX_ENEMY_ID = 511; // Min: 20, Max: 511
+
+// Other settings
+const int GH_DRAW_OVER_THRESHOLD = 32;
+const float GH_GRAVITY = 0.16;
+const float GH_TERMINAL_VELOCITY = 3.2;
+const int GH_SPAWN_SPRITE = 22; // Min: 0, Max: 255, Default: 22
+const int GH_FAKE_Z = 0; // 0 = No, 1 = Yes
+const int GH_ENEMIES_FLICKER = 0; // 0 = No, 1 = Yes
+const int GH_PREFER_GHOST_ZH_SHADOWS = 0; // 0 = No, 1 = Yes
+
+// Top-left corner of a 4x4 block of blank tiles
+const int GH_BLANK_TILE = 65456; // Min: 0, Max: 65456
+
+// Invisible combo with no properties set
+const int GH_INVISIBLE_COMBO = 1964; // Min: 1, Max: 65279
+
+// End standard settings -------------------------------------------------------
+
+
+
+// Advanced settings -----------------------------------------------------------
+
+// AutoGhost will read a script name from the enemy's name if attribute 12
+// is set to this. Must be a negative number.
+const int AUTOGHOST_READ_NAME = -1;
+
+// When reading a script from the enemy name, this character marks the
+// beginning of the script name.
+// Default: 64 ( @ )
+const int AUTOGHOST_DELIMITER = 64;
+
+// Misc. attribute 11 can be set to this instead of GH_INVISIBLE_COMBO.
+// Must be a negative number.
+const int __GH_INVISIBLE_ALT = -1;
+
+// This will use the invisible combo, but also set npc->Extend to 3 or 4,
+// hiding the initial spawn puff. Must be a negative number.
+const int __GH_INVISIBLE_EXTEND = -2;
+
+// If enabled, the FFC will be invisible, and Screen->DrawCombo will be used
+// to display enemies.
+const int __GH_USE_DRAWCOMBO = 1;
+
+// Enemies flash or flicker for this many frames when hit. This does not
+// affect enemies that use the invisible combo.
+// Default: 32
+const int __GH_FLASH_TIME = 32;
+
+// Enemies will be knocked back for this many frames when hit.
+// Default: 16
+// Max: 4095
+const int __GH_KNOCKBACK_TIME = 16;
+
+// The speed at which enemies are knocked back, in pixels per frame.
+// Default: 4
+const int __GH_KNOCKBACK_STEP = 4;
+
+// The imprecision setting used when a movement function is called internally
+// (except for walking functions).
+const int __GH_DEFAULT_IMPRECISION = 2;
+
+// npc->Misc[] index
+// Set this so it doesn't conflict with other scripts. Legal values are 0-15.
+const int __GHI_NPC_DATA = 15;
+
+// eweapon->Misc[] indices
+// These must be unique numbers between 0 and 15.
+const int __EWI_FLAGS          = 15; // Every index but this one can be used by non-ghost.zh EWeapons
+const int __EWI_ID             = 3;
+const int __EWI_XPOS           = 4;
+const int __EWI_YPOS           = 5;
+const int __EWI_WORK           = 6;
+const int __EWI_WORK_2         = 7; // Only used by a few movement types
+const int __EWI_MOVEMENT       = 8;
+const int __EWI_MOVEMENT_ARG   = 9;
+const int __EWI_MOVEMENT_ARG_2 = 10;
+const int __EWI_LIFESPAN       = 11;
+const int __EWI_LIFESPAN_ARG   = 12;
+const int __EWI_ON_DEATH       = 13;
+const int __EWI_ON_DEATH_ARG   = 14;
+
+// These are only used by dummy EWeapons;
+// they can use the same values as __EWI_XPOS and __EWI_YPOS
+const int __EWI_DUMMY_SOUND    = 2;
+const int __EWI_DUMMY_STEP     = 4;
+const int __EWI_DUMMY_SPRITE   = 5;
+
+// End advanced settings -------------------------------------------------------
+
+
+import "ghost_zh/common.z"
+import "ghost_zh/depreciated.z"
+import "ghost_zh/drawing.z"
+import "ghost_zh/eweapon.z"
+import "ghost_zh/eweaponDeath.z"
+import "ghost_zh/eweaponMovement.z"
+import "ghost_zh/flags.z"
+import "ghost_zh/global.z"
+import "ghost_zh/init.z"
+import "ghost_zh/modification.z"
+import "ghost_zh/movement.z"
+import "ghost_zh/other.z"
+import "ghost_zh/update.z"
+
+import "ghost_zh/scripts.z"
