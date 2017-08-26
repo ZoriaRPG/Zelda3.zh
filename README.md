@@ -98,3 +98,7 @@
 		
 	// t/b/a
 		./enemies/bosses/Aghanim.zh
+		./enemies/bosses/Mothula.zh
+		
+	// Needed:
+		./enemies/bosses/Trinexx.zh
