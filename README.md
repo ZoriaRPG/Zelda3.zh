@@ -12,9 +12,9 @@
 	Deps:     std.zh, std_update.zh ( ZQ < 2.54 ), ghost.zh, tango.zh, lweapon.zh, stdWeapons.zh, laser.zh, ZVersion.zh ( ZQ  < 2.54 ) 
 
 	Working files will go into a path structure as follows:
-	/
-		Z3.cgf -- Configuration File
-		Z3.zh -- Main import. 
+	./
+		Z3.cfg -- Configuration File
+		Z3.zh  -- Main import. 
 		Z3.qst -- Quest File Template
 		
 		include/ -- Headers required by the  component scripts. 
@@ -35,32 +35,66 @@
 
 			
 
-	//Working
+	// Working
+	
+		./enemies/armosstatue.zh
+		./enemies/bari.zh
+		./enemies/beamos.zh
+		./enemies/buzzblob.zh
+		./enemies/chainknight.zh
+		./enemies/copi.zh
+		./enemies/Crow.zh
+		./enemies/eyegore.zh
+		./enemies/gibo.zh
+		./enemies/hardhat.zh
+		./enemies/helmasaur.zh
+		./enemies/Hinox.zh
+		./enemies/Kyameron.zh
+		./enemies/Lynel.zh
+		./enemies/popo.zh
+		./enemies/Ropa.zh
+		./enemies/Slugula.zh
+		./enemies/Snapdragon.zh
+		./enemies/Taros.zh
+		./enemies/wallmaster.zh
+		./enemies/zazak.zh
+		./enemies/bosses/armosknights.zh
+		./enemies/bosses/Arrghus.zh
+		./enemies/bosses/blind.zh
+		./enemies/bosses/ganon.zh
+		./enemies/bosses/HelmasaurKing.zh
+		./enemies/bosses/Kholdstare.zh
+		./enemies/bosses/Lanmola.zh
+		./enemies/bosses/moldorm.zh
+		./enemies/bosses/vitreous.zh
 
-		StealItem_0.5.zs
-		Chestgame.zs
-		FFC_SplittersAndTribbles.zs
-		heartjar_magicjar.zs
-		FasterConveyors.zs
-		Mirror_3.3.zs
+		./StealItem_0.5.zs
+		./Chestgame.zs
+		./FFC_SplittersAndTribbles.zs
+		./heartjar_magicjar.zs
+		./FasterConveyors.zs
+		./Mirror_3.3.zs
 
 	//Untested
-		CaneOfByrna.zs
-		ChestCallbacks.zs
-		GOddessCube.zs
-		Compass.zs
-		PotionStacking.zs -- We can probably toss this one. 
-		XtalSwitches.zs
-		Z3_Items_Mirror_Byrna.zs
-		Mirror_Cape_Byrna2.zs -- Duplication here. 
-		HedgeClipReward.zs
-		DeadRock.zs
+		./CaneOfByrna.zs
+		./ChestCallbacks.zs
+		./GoddessCube.zs
+		./Compass.zs
+		./PotionStacking.zs -- We can probably toss this one. 
+		./XtalSwitches.zs
+		./Z3_Items_Mirror_Byrna.zs
+		./Mirror_Cape_Byrna2.zs -- Duplication here. 
+		./HedgeClipReward.zs
+		./DeadRock.zs
 
 	//Unfinished
 		Cane of Somaria Components
-			CaneOfSomaria.zs
-			SomariaBlock.zs
-			MovingBlocks.zs	
-		KingZora.zs
-		ScriptedHookshot.zs - Meant for Double-Hookshot
-		Z3Items.zs
+			./CaneOfSomaria.zs
+			./SomariaBlock.zs
+			./MovingBlocks.zs	
+		./KingZora.zs
+		./ScriptedHookshot.zs - Meant for Double-Hookshot
+		./Z3Items.zs
+		
+	// t/b/a
+		./enemies/bosses/Aghanim.zh
