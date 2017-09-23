@@ -798,12 +798,17 @@ ffc script Chest{
 			open = true;
 		}
 		//do the delay?
-		while ( timer-- ) Waitframe();
 		
-		//spawn the enemy. 
-		npc n = Screen->CreateNPC(enemy);
-		n->X = x+offsetX;
-		n->Y = y+offsetY;
+		if ( open ) {
+							
+			while ( timer-- ) Waitframe();
+			
+			
+			//spawn the enemy. 
+			npc n = Screen->CreateNPC(enemy);
+			n->X = x+offsetX;
+			n->Y = y+offsetY;
+		}
 		return open;
 		
 	}
