@@ -1,4 +1,4 @@
-//Chests Using Callbacks, Alpha 3
+//Chests Using Callbacks, Alpha 4
 
 float CallBacks[1024];  //0 is NULL, and the current callback index; the rest are array pointers. 
 
@@ -288,6 +288,7 @@ ffc script Chest{
 		item i; itemdata id;
 		//Check which chests EXIST and flag them	
 		
+		bool isOpen;
 			
 		//Sotore the positions --combo locations-- of each chest
 		
@@ -656,7 +657,7 @@ ffc script Chest{
 				
 				
 				
-				if ( PressChestCutton() ) {
+				if ( PressChestButton() ) {
 					//check to see if it is locked
 					if ( IsLockedChest(q[8]) }{ 
 						if ( Game->LKeys[Game->GetCurLevel()] > 0 ) {
@@ -668,7 +669,7 @@ ffc script Chest{
 							//open the chest.
 							if ( chest_contents[q[8]] < 0 ) { 
 								//it is an enemy, so
-								do_open_enemy_chest(q[8], chest_layer[ q[8] ], chest_type[ q[8] ], ( chest_contents[ q[8] ] * -1), false, true, false);
+								isOpen = do_open_enemy_chest(q[8], chest_layer[ q[8] ], chest_type[ q[8] ], ( chest_contents[ q[8] ] * -1), false, true, false, ComboX(chest_pos_id[q[8]]), ComboY(chest_pos_id[q[8]]));
 				
 							}
 							else do_chest_open( q[7], chest_layer[ q[8] ], chest_type[ q[8] ], chest_contents[ q[8] ], 
@@ -685,7 +686,7 @@ ffc script Chest{
 							//open the chest.
 							if ( chest_contents[q[8]] < 0 ) { 
 								//it is an enemy, so
-								do_open_enemy_chest(q[8], chest_layer[ q[8] ], chest_type[ q[8] ], ( chest_contents[ q[8] ] * -1), true, false, false);
+								isOpen = do_open_enemy_chest(q[8], chest_layer[ q[8] ], chest_type[ q[8] ], ( chest_contents[ q[8] ] * -1), true, false, false, ComboX(chest_pos_id[q[8]]), ComboY(chest_pos_id[q[8]]));
 				
 							}
 							else do_chest_open( q[7], chest_layer[ q[8] ], chest_type[ q[8] ], chest_contents[ q[8] ], 
@@ -696,7 +697,7 @@ ffc script Chest{
 						if ( HasBossKey(Game->GetCurLevel()) ) {
 							if ( chest_contents[q[8]] < 0 ) { 
 								//it is an enemy, so
-								do_open_enemy_chest(q[8], chest_layer[ q[8] ], chest_type[ q[8] ], ( chest_contents[ q[8] ] * -1), false, false, true);
+								isOpen = do_open_enemy_chest(q[8], chest_layer[ q[8] ], chest_type[ q[8] ], ( chest_contents[ q[8] ] * -1), false, false, true, ComboX(chest_pos_id[q[8]]), ComboY(chest_pos_id[q[8]]));
 				
 							}
 							else do_chest_open( q[7], chest_layer[ q[8] ], chest_type[ q[8] ], chest_contents[ q[8] ], 
@@ -706,7 +707,7 @@ ffc script Chest{
 					else {
 						if ( chest_contents[q[8]] < 0 ) { 
 							//it is an enemy, so
-							do_open_enemy_chest(q[8], chest_layer[ q[8] ], chest_type[ q[8] ], ( chest_contents[ q[8] ] * -1), false, false, false);
+							isOpen = do_open_enemy_chest(q[8], chest_layer[ q[8] ], chest_type[ q[8] ], ( chest_contents[ q[8] ] * -1), false, false, false, ComboX(chest_pos_id[q[8]]), ComboY(chest_pos_id[q[8]]));
 				
 						}
 						else do_chest_open( q[7], chest_layer[ q[8] ], chest_type[ q[8] ], chest_contents[ q[8] ], 
@@ -766,12 +767,48 @@ ffc script Chest{
 		//using a basic messaging system.
 		
 	}
-	void do_open_enemy_chest(int pos, int layer, int type, int enemy, bool key, bool level_key, bool boss_key){
+	bool do_open_enemy_chest(int pos, int layer, int type, int enemy, bool key, bool level_key, bool boss_key, int x, int y){
+		int offsetX; int offsetY;
+		if ( type >= CHEST_TYPE_BIG && type <  CHEST_TYPE_GRAND ) {
+			offsetX += 8;
+		}
+		if type >= CHEST_TYPE_GRAND ) {
+			offsetX += 8
+			offsetY += 8;
+		}
+
+		bool open; int timer = CHEST_CALLBACKS_SPAWN_ENEMY_DELAY;
+		//use the appropriate key.
+		if ( key ) {
+			if ( Game->Counter[CR_KEYS] > 0 ) {
+				Game->DCounter[CR_KEYS] -= 1; //Regular key
+				open = true;
+			}
+		}
 		
-		//use the appropriate key. 
+		else if ( level_key ) {
+			if ( Game->LKeys[Game->GetCurLevel()] > 0 ) {
+				
+				Game->LKeys[Game->GetCurLevel()] -= 1; //Boss Key
+			}
+			open = true;
+		}
+		
+		else if ( boss_key && HasBossKey(Game->GetCurLevel()) ){
+			open = true;
+		}
 		//do the delay?
+		while ( timer-- ) Waitframe();
+		
 		//spawn the enemy. 
+		npc n = Screen->CreateNPC(enemy);
+		n->X = x+offsetX;
+		n->Y = y+offsetY;
+		return open;
+		
 	}
 		
 } //end script
+
+const int CHEST_CALLBACKS_SPAWN_ENEMY_DELAY = 20; 
 				
