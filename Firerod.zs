@@ -41,6 +41,7 @@ item script BasicFireRod{
 		flame->X = Link->X;
 		flame->Y = Link->Y;
 		flame->UseSprite = Cond(sprite > 0, sprite, FIREROD_FLAME_SPRITE);
+		flame->Dir = Link->Dir;
 		if ( Link->Dir == DIR_UP ) {
 			flame->Y -= 16;
 		}
