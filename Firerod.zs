@@ -54,7 +54,7 @@ item script BasicFireRod{
 			flame->Flip = ROT_CCW;
 			flame->X += 16;
 		}
-		if ( Link->Dir = DIR_RIGHT ) {
+		if ( Link->Dir == DIR_RIGHT ) {
 			flame->Flip = ROT_CW;
 			flame->X -= 16;
 		}
