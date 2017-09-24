@@ -89,11 +89,12 @@ void DoFireRod(){
 				cmb_pos = ComboAt(l->X, l->X);
 				for ( int q = 0; q < 3; q++ ) {
 					for ( int w = 0; w < 2; w++ ) {
-						if ( ____LayerComboFI(pos, flags[w] , layer ) {
+						if ( ____LayerComboFI(pos, flags[w] , layer ) ) {
 							lweapon makefire = Screen->CreateLWeapon(LW_FIRE);
 							makefire->X = ComboX(cmb_pos);
 							makefire->Y = ComboY(cmb_pos);
 							makefire->UseSprite = BLANK_FIRE_SPRITE;
+							SetLayerComboF(LAYER_TORCH_FLAG, cmb_pos, CF_LIT_TORCH);
 						}
 					}
 				}
@@ -119,7 +120,9 @@ void DoFireRod(){
 		}
 	}
 }
-	
+
+const int CF_LIT_TORCH = 99; //script 2. 
+const int LAYER_TORCH_FLAG = 0; //Look for them on his layer. 
 
 
 //Call before Waitdraw()
@@ -127,14 +130,16 @@ void DoFireRod(){
 void DarkRoom(int layer, bool trans, int bitmap_id)
 {
 	int q[16]; int src; int cnt; 
-	int lightsourceflags[]={CF_CANDLE1, CF_CANDLE2};
+	int lightsourceflags[]={CF_LIT_TORCH}; 
 	q[9] = SizeOfArray(lightsourceflags);
+	int lightsourceflaglayers[]={LAYER_TORCH_FLAG};
+	q[15] = SizeOfArray(lightsourceflaglayers);
 	
 	for ( q[10] = SizeOfArray(LightSources); q[10] >= 0; q[10]-- ) { LightSources[ q[10] ] = -1; } //Wipe it every frame. 
 	Screen->SetRendertarget(bitmap_id);
 	Screen->Rectangle(layer, 0, 0, 256, 256, COLOUR_BLACK, 100, 0, 0, 0, true, OP_OPAQUE);
 	//Add light sources to the array for combos. 
-	for ( q[0] = 0; q[0] < 3; q[0]++ ) 
+	for ( q[0] = 0; q[0] < q[15]; q[0]++ ) 
 	{
 		//Check for light sources on layers
 		for ( q[1] = 0; q[1] < 176; q[1]++ ) 
@@ -142,7 +147,7 @@ void DarkRoom(int layer, bool trans, int bitmap_id)
 			//check all positions.
 			for ( q[2] = 0; q[2] < q[9]; q[2]++ ) 
 			{	//and all flags
-				if (  ____LayerComboFI(q[1], q[2] , s[0] ) 
+				if (  ____LayerComboFI(q[1], lightsourceflags[ q[2] ], lightsourceflaglayers[ [q[0] ] ) 
 				{
 					LightSources[src] = ComboX(q[1]);
 					LightSources[src+1] = ComboY(q[1]);
