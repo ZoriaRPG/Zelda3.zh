@@ -1,6 +1,6 @@
 ////////////////////////////
 /// Simple Firerod       ///
-/// v0.2                 ///
+/// v0.3                 ///
 /// By: ZoriaRPG         ///
 /// 24th September, 2017 ///
 ////////////////////////////
@@ -40,7 +40,7 @@ item script BasicFireRod{
 		lweapon flame = Screen->CreateLWeapon(LW_CUST_FLAME);
 		flame->X = Link->X;
 		flame->Y = Link->Y;
-		flame->UseSprite = Cond(sprite > 0, sprite, FIREROD_FLAME_SPRITE);
+		flame->UseSprite(Cond(sprite > 0, sprite, FIREROD_FLAME_SPRITE));
 		flame->Dir = Link->Dir;
 		if ( Link->Dir == DIR_UP ) {
 			flame->Y -= 16;
@@ -88,11 +88,12 @@ void DoFireRod(){
 				cmb_pos = ComboAt(l->X, l->X);
 				for ( int q = 0; q < 3; q++ ) {
 					for ( int w = 0; w < 2; w++ ) {
-						if ( ____LayerComboFI(pos, flags[w] , layer ) ) {
+						if ( ____LayerComboFI(cmb_pos, flags[w] , q ) ) {
 							lweapon makefire = Screen->CreateLWeapon(LW_FIRE);
 							makefire->X = ComboX(cmb_pos);
 							makefire->Y = ComboY(cmb_pos);
-							makefire->UseSprite = BLANK_FIRE_SPRITE;
+							makefire->UseSprite(BLANK_FIRE_SPRITE);
+							makefire->Misc[FIREROD_MISC_INDEX] |= FIREROD_FLAME_FLAG;
 							SetLayerComboF(LAYER_TORCH_FLAG, cmb_pos, CF_LIT_TORCH);
 						}
 					}
@@ -105,7 +106,7 @@ void DoFireRod(){
 					if ( n->HitXOffset > 255 ) continue;
 					if ( n->HitYOffset < 0 ) continue;
 					if ( n->HitYOffset > 255 ) continue;
-					if ( Collision(l,e) ){
+					if ( Collision(l,n) ){
 						lweapon makefire = Screen->CreateLWeapon(LW_FIRE);
 						makefire->Damage = l->Damage;
 						makefire->X = n->X + n->HitXOffset;
@@ -135,7 +136,7 @@ void DarkRoom(int layer, bool trans, int bitmap_id)
 	q[15] = SizeOfArray(lightsourceflaglayers);
 	
 	for ( q[10] = SizeOfArray(LightSources); q[10] >= 0; q[10]-- ) { LightSources[ q[10] ] = -1; } //Wipe it every frame. 
-	Screen->SetRendertarget(bitmap_id);
+	Screen->SetRenderTarget(bitmap_id);
 	Screen->Rectangle(layer, 0, 0, 256, 256, COLOUR_BLACK, 100, 0, 0, 0, true, OP_OPAQUE);
 	//Add light sources to the array for combos. 
 	for ( q[0] = 0; q[0] < q[15]; q[0]++ ) 
@@ -146,7 +147,7 @@ void DarkRoom(int layer, bool trans, int bitmap_id)
 			//check all positions.
 			for ( q[2] = 0; q[2] < q[9]; q[2]++ ) 
 			{	//and all flags
-				if (  ____LayerComboFI(q[1], lightsourceflags[ q[2] ], lightsourceflaglayers[ [q[0] ] ) 
+				if (  ____LayerComboFI(q[1], lightsourceflags[ q[2] ], lightsourceflaglayers[ q[0] ] ) ) 
 				{
 					LightSources[src] = ComboX(q[1]);
 					LightSources[src+1] = ComboY(q[1]);
@@ -160,7 +161,7 @@ void DarkRoom(int layer, bool trans, int bitmap_id)
 	//add light sources to the array for weapons
 	for ( q[4] = Screen->NumLWeapons(); q[4] > 0; q[4] -- )
 	{
-		lweapon l = Screen->LoadLWeapon[q[4]];
+		lweapon l = Screen->LoadLWeapon(q[4]);
 		//for special fire rod weapons
 		if ( l->ID == LW_CUST_FLAME )
 		{
@@ -173,7 +174,7 @@ void DarkRoom(int layer, bool trans, int bitmap_id)
 		//for fire weapons that are not dummy weapons
 		if ( l->ID == LW_FIRE )
 		{
-			if ( l->UseSprite != BLANK_FIRE_SPRITE ) 
+			if ( (l->Misc[FIREROD_MISC_INDEX]&FIREROD_FLAME_FLAG) != 0 ) 
 			{
 				LightSources[src] = l->X + 8;
 				LightSources[src+1] = l->Y + 8;
