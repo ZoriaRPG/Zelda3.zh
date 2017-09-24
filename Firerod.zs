@@ -36,6 +36,7 @@ const int LIGHT_SOURCE_CIRCLE_LAYER = 0;
 
 item script BasicFireRod{
 	void run(int sprite, int damage, int step_speed){
+		Link->Action = LA_ATTACKING;
 		lweapon flame = Screen->CreateLWeapon(LW_CUST_FLAME);
 		flame->X = Link->X;
 		flame->Y = Link->Y;
