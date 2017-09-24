@@ -189,7 +189,7 @@ void DarkRoom(int layer, bool trans, int bitmap_id)
 	//Draw all light sources to the bitmap.
 	for ( q[12] = 0; q[12] <= q[13]; q[12] += 3 )
 	{
-		Screen->Circle(LIGHT_SOURCE_CIRCLE_LAYER, LightSources[ q[12] ], LightSources[ q[12] ]+1, LightSources[ q[12] ]+2, 0, LIGHT_SOURCE_CIRCLE_SCALE,
+		Screen->Circle(LIGHT_SOURCE_CIRCLE_LAYER, LightSources[ q[12] ], LightSources[ q[12]+1 ], LightSources[ q[12]+2 ], 0, LIGHT_SOURCE_CIRCLE_SCALE,
 		0,0,0, true, OP_OPAQUE);
 		if ( LightSources[ q[12] ] == -1 ) break; //Sanity check. 
 	}
