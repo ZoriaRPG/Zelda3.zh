@@ -71,9 +71,6 @@ item script BasicFireRod{
 
 //Returns true if the combo at '(x, y)' has either an inherent or place flag of type 'flag'
 bool ____LayerComboFI(int pos, int flag, int layer){
-
-	int loc = ComboAt(x,y);
-
 	return GetLayerComboF(layer,pos) == flag || GetLayerComboI(layer,pos) == flag;
 }
 
