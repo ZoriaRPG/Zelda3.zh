@@ -137,11 +137,11 @@ ffc script z3shop{
 			//If we reach here, then Link is with the Y axis field that allows buying items.
 			for ( q[1] = 0; q[1] < 3; q[1]++ ) 
 			{
-				//if Link is within proximity of any of the three items. 
-				if ( Z3Shop_LinkDistX(positions[ q[1]+Z3SHOP_POSITIONS_X ], Z3SHOP_LINK_PROXIMITY_X )
+				//If We are not decrementing the DCounter...
+				if ( Game->DCounter[CR_RUPEES] == 0 ) 
 				{
-					//If We are not decrementing the DCounter...
-					if ( Game->DCounter[CR_RUPEES] == 0 ) 
+					//if Link is within proximity of any of the three items.
+					if ( Z3Shop_LinkDistX(positions[ q[1]+Z3SHOP_POSITIONS_X ], Z3SHOP_LINK_PROXIMITY_X )
 					{
 						//If Link presses a valid purchasing button:
 						if ( Z3Shop_PressButton() ) 
