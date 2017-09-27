@@ -122,7 +122,7 @@ const int DOFIREROD_LOOP_NPCS 		= 4;
 
 //Call before Waitdraw. 
 void DoFireRod(){
-	int q[DOFIREROD_COMBO_POS]; bool makeflame; int flags[2]={CF_CANDLE1, CF_CANDLE2};
+	bool makeflame; int flags[2]={CF_CANDLE1, CF_CANDLE2};
 	int q[5];
 	for ( q[DOFIREROD_LOOP_LWPNS_SCAN] = Screen->NumLWeapons(); q[DOFIREROD_LOOP_LWPNS_SCAN] > 0; q[DOFIREROD_LOOP_LWPNS_SCAN]-- ) {
 		lweapon l = Screen->LoadLWeapon(q[DOFIREROD_LOOP_LWPNS_SCAN]);
