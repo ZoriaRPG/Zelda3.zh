@@ -121,7 +121,7 @@ ffc script z3shop{
 			}
 			
 			//Performace checks if Link could not buy an item.
-			if ( Link->Dir !+ DIR_UP ) {
+			if ( Link->Dir != DIR_UP ) {
 				Waitframe();
 				continue;
 			}
