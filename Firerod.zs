@@ -1,8 +1,8 @@
 ////////////////////////////
 /// Simple Firerod       ///
-/// v0.4                 ///
+/// v0.4.1               ///
 /// By: ZoriaRPG         ///
-/// 26th September, 2017 ///
+/// 27th September, 2017 ///
 ////////////////////////////
 /// Note: All of this is ugly. In 2.54, you will be able to set NPCs to specific script defences, so you can use a real
 ///       FLAME weapon that you set up, and 2.54 may add SCRIPT weapon triggers to combos, as well. 
@@ -182,7 +182,7 @@ const int DARKROOM_LIGHTSOURCE_COUNTS 		= 10;
 
 
 //Call before Waitdraw()
-//DarkDroom(DARKROOM_LAYER, false, BITMAP_DARKNESS);
+//DarkRoom(DARKROOM_LAYER, false, BITMAP_DARKNESS);
 void DarkRoom(int layer, bool trans, int bitmap_id)
 {
 	int q[11];
@@ -261,4 +261,32 @@ void DarkRoom(int layer, bool trans, int bitmap_id)
 }
 			
 
+global script TestFireRod{
+	void run(){
+		while(true){
+			//Debug function. 
+			if ( Link->PressEx1 && Link->PressEx2 ){
+				TraceNL();
+				int a = SizeOfArray(LightSources); bool end = true;
+				int s[]="Tracing LightSouces[]"; int ss[]="Index: ";
+				TraceS(s); TraceNL();
+				for ( int q = 0; q < a; q++ ) { 
+					if ( LightSources[q] == -1 ) end = true;
+					if ( end ) {
+						int sss[]="Reached end of valid indices (-1) at index position: ";
+						TraceS(sss); Trace(q); TraceNL();
+						break;
+					}
+					else {
+						TraceS(ss); Trace(q); TraceNL(); Trace(LightSources[q]); TraceNL();
+					}
+				}
+			}
 		
+			DoFireRod();
+			DarkRoom(DARKROOM_LAYER, false, BITMAP_DARKNESS);
+			Waitdraw();
+			Waitframe();
+		}
+	}
+}
