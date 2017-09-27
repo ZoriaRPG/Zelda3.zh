@@ -138,33 +138,32 @@ ffc script z3shop{
 			for ( q[1] = 0; q[1] < 3; q[1]++ ) 
 			{
 				//If We are not decrementing the DCounter...
-				if ( Game->DCounter[CR_RUPEES] == 0 ) 
+				if ( Game->DCounter[CR_RUPEES] != 0 ) break; 
+				
+				//if Link is within proximity of any of the three items.
+				if ( Z3Shop_LinkDistX(positions[ q[1]+Z3SHOP_POSITIONS_X ], Z3SHOP_LINK_PROXIMITY_X )
 				{
-					//if Link is within proximity of any of the three items.
-					if ( Z3Shop_LinkDistX(positions[ q[1]+Z3SHOP_POSITIONS_X ], Z3SHOP_LINK_PROXIMITY_X )
+					//If Link presses a valid purchasing button:
+					if ( Z3Shop_PressButton() ) 
 					{
-						//If Link presses a valid purchasing button:
-						if ( Z3Shop_PressButton() ) 
+						//Buy the item!
+						
+						//This syntax works in 2.54, but not 2.50.x:
+						//if (!( Z3Shop_BuyItem(id[ q[1] ]->ID, prices[ q[1] ], Z3SHOP_HOLDUP_TYPE) ))
+						//{
+						//	if ( Z3SHOP_SFX_BUY_ERROR ) Game->PlaySound(Z3SHOP_SFX_BUY_ERROR);
+						//}
+						//else {
+						//	if ( Z3SHOP_SFX_BUY_ITEM ) Game->PlaySound(Z3SHOP_SFX_BUY_ITEM);
+						//}
+						
+						//if we are using 2.50.0, we need to do it this way@
+						if (!( Z3Shop_BuyItem(items[ q[1] ], prices[ q[1] ], Z3SHOP_HOLDUP_TYPE) ))
 						{
-							//Buy the item!
-							
-							//This syntax works in 2.54, but not 2.50.x:
-							//if (!( Z3Shop_BuyItem(id[ q[1] ]->ID, prices[ q[1] ], Z3SHOP_HOLDUP_TYPE) ))
-							//{
-							//	if ( Z3SHOP_SFX_BUY_ERROR ) Game->PlaySound(Z3SHOP_SFX_BUY_ERROR);
-							//}
-							//else {
-							//	if ( Z3SHOP_SFX_BUY_ITEM ) Game->PlaySound(Z3SHOP_SFX_BUY_ITEM);
-							//}
-							
-							//if we are using 2.50.0, we need to do it this way@
-							if (!( Z3Shop_BuyItem(items[ q[1] ], prices[ q[1] ], Z3SHOP_HOLDUP_TYPE) ))
-							{
-								if ( Z3SHOP_SFX_BUY_ERROR ) Game->PlaySound(Z3SHOP_SFX_BUY_ERROR);
-							}
-							else {
-								if ( Z3SHOP_SFX_BUY_ITEM ) Game->PlaySound(Z3SHOP_SFX_BUY_ITEM);
-							}
+							if ( Z3SHOP_SFX_BUY_ERROR ) Game->PlaySound(Z3SHOP_SFX_BUY_ERROR);
+						}
+						else {
+							if ( Z3SHOP_SFX_BUY_ITEM ) Game->PlaySound(Z3SHOP_SFX_BUY_ITEM);
 						}
 					}
 				}
