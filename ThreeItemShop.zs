@@ -206,8 +206,8 @@ ffc script z3shop{
 	//Check proximity to the item. 
 	bool Z3Shop_LinkDistX(int a, int distance) {
 		int dist;
-		if ( ComboX(a) > Link->X ) dist = ComboX(a) - Link->X;
-		else dist = Link->X - ComboX(a);
+		if ( a > Link->X ) dist = a - Link->X;
+		else dist = Link->X - a;
 		return ( dist <= distance );
 	} 
 	
