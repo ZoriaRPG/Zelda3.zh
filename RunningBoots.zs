@@ -1,3 +1,9 @@
+/// A Basic Running Implementation
+/// ZoriaRPG
+/// v1.0
+/// 28th September, 2017
+/// Note: Adapted from the Link's Awakening Header Project 'Pieces of Power' fast walk functions. 
+
 int RunningBoots[26]; //Array to hold the values for the Z4 items.
 const int WALK_SPEED_POWERUP = 4; //Number of extra Pixels Link walks when he has a Piece of Power
 const int POWER_WALK_TIMER = 24; //The timer for WalkSpeed().
