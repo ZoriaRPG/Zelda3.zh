@@ -50,7 +50,7 @@ ffc script OoT_Archery{
 			if ( archery[Z5ARCHERY_FRAME] < 60 ) {
 				archery[Z5ARCHERY_FRAME]++;
 			}
-			else archery[Z5ARCHERY_FRAME] = 0;
+			if ( archery[Z5ARCHERY_FRAME] == 60 ) { archery[Z5ARCHERY_FRAME] = 0; }
 			
 			//Pay to begin the game.
 			if ( LinkCollision(this) 
