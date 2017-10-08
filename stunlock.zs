@@ -60,15 +60,99 @@ void DoLWeaponNPC_Collision(){
 			}
 		}
 	}
-}		
+}
+
+const int COUNT_LWEAPONS 	= 0; 
+const int COUNT_EWEAPONS 	= 1;
+const int COUNT_NPCS 		= 2; 
+const int COUNT_ITEMS 		= 3;
+const int COUNT_FFCS 		= 4;
+const int COUNT_COMBOS 		= 5;
+
+//Pre-Waitdraw
+//Master loop for all lweapon and npc collision. 
+//Further-optimised. 
+void MasterLWeaponsLoop(){
+	lweapon l; npc n; item i; eweapon e; ffc f;
+	int counts[7]; 
+	
+	
+	int counts[COUNT_NPCS] = Screen->NumNPCs();
+	int counts[COUNT_LWEAPONS] = Screen->NumLWeapons();
+	int counts[COUNT_EWEAPONS] = Screen->NumEWeapons();
+	int counts[COUNT_COMBOS] = 175; //combo positions. 
+	int counts[COUNT_FFCS] = 32; 
+	int counts[COUNT_ITEMS] = Screen->NumItems();
+	for ( ; counts[COUNT_LWEAPONS] > 0; counts[COUNT_LWEAPONS]-- )
+	{
+		l = Screen->LoadLWeapon(counts[COUNT_LWEAPONS]);
+		
+		//LWeapon Setup
+		LWeaponRoutines(l);
+		
+		//LWeapon and NPC
+		for ( ; counts[COUNT_NPCS] > 0; counts[COUNT_NPCS]-- )
+		{ 
+			n = Screen->LoadNPC(counts[COUNT_NPCS]);
+			if ( Collision(l,n)
+			{
+				AllNpcLWeaponCollisionRoutines(l,n);
+				//functions in the form of identifier(l,n)
+			}
+		}
+		
+		//LWeapon and items
+		
+		for ( ; counts[COUNT_ITEMS] > 0; counts[COUNT_ITEMS]-- ) 
+		{
+			//brang pickup
+
+			
+		}
+		
+		
+		//lweapon and eweapons
+		
+		for ( ; counts[COUNT_EWEAPONS] >= 0; counts[COUNT_EWEAPONS]-- )
+		{
+			
+			
+		}
+		
+		//lweapon and combos
+		
+		for ( ; counts[COUNT_COMBOS] >= 0; counts[COUNT_COMBOS]-- )
+		{
+			
+			
+		}
+		
+		
+		//lweapon and combos
+		
+		for ( ; counts[COUNT_COMBOS] >= 0; counts[COUNT_COMBOS]-- )
+		{
+			
+			
+		}
+		
+		//lweapon and ffcs
+		
+		for ( ; counts[COUNT_FFCS] > 0; counts[COUNT_FFCS]-- )
+		{
+			
+			
+		}
+		
+	}
+}
 				
 
 //Global active script. 
 global script Z3_active{
 	void run(){
 		while(true){
-			DoLWeaponsCheckLoop
-			DoLWeaponNPC_Collision();
+			MasterLWeaponsLoop();
 			
 			Waitdraw();
 			
