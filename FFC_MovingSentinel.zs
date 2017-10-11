@@ -1,6 +1,6 @@
 ///////////////////////////
 /// Moving Sentinel FFC ///
-/// v0.4.1              ///
+/// v0.4.2              ///
 /// 11th october, 2017  ///
 /// By: ZoriaRPG        ///
 /////////////////////////////////////////////////////////////////////////////
@@ -21,6 +21,9 @@ const int FFC_SENTINEL_SFX_WHISTLE = 63; //Default sound.
 const int FFC_SENTINEL_DEFAULT_STRING = 1; //Default string. 
 
 const int FFC_SENTINEL_SPR_BLANK = 88; //A blank weapon sprite. 
+
+const int FFC_SENTINEL_LOS_GUARD_PRECISION = 7;
+const int FFC_SENTINEL_LOS_WEAPON_PRECISION = 12;
 
 				
 ffc script MovingSentinel
@@ -91,7 +94,7 @@ ffc script MovingSentinel
 					spawnedweapon = false;
 				}
 				//If it collides with Link, remove it, and begin the process of removing him, too. 
-				if ( FFC_Sentinel_DistXY(spotter, 16) )
+				if ( FFC_Sentinel_DistXY(spotter, FFC_SENTINEL_LOS_WEAPON_PRECISION) )
 				{
 					Remove(spotter);
 					hit = true;
@@ -182,7 +185,7 @@ ffc script MovingSentinel
 					if ( FFC_Sentinel_LinkLeftOf(this) )
 					{
 						//and within 8 pixels of the sentinel's Y axis
-						if ( FFC_Sentinel_DistY(this, 8) )
+						if ( FFC_Sentinel_DistY(this, FFC_SENTINEL_LOS_GUARD_PRECISION) )
 						{
 							spotted = true; //we see you.
 							continue; //resume loop from the top.
@@ -194,7 +197,7 @@ ffc script MovingSentinel
 					if ( FFC_Sentinel_LinkRightOf(this) )
 					{
 						//and within 8 pixels of the sentinel's Y axis
-						if ( FFC_Sentinel_DistY(this, 8) )
+						if ( FFC_Sentinel_DistY(this, FFC_SENTINEL_LOS_GUARD_PRECISION) )
 						{
 							spotted = true;
 							continue;
@@ -206,7 +209,7 @@ ffc script MovingSentinel
 					if ( FFC_Sentinel_LinkAbove(this) )
 					{
 						//and within 8 pixels of the sentinel's X axis
-						if ( FFC_Sentinel_DistX(this, 8) )
+						if ( FFC_Sentinel_DistX(this, FFC_SENTINEL_LOS_GUARD_PRECISION) )
 						{
 							spotted = true;
 							continue;
@@ -218,7 +221,7 @@ ffc script MovingSentinel
 					if ( FFC_Sentinel_LinkBelow(this) )
 					{
 						//and within 8 pixels of the sentinel's X axis
-						if ( FFC_Sentinel_DistX(this, 8) )
+						if ( FFC_Sentinel_DistX(this, FFC_SENTINEL_LOS_GUARD_PRECISION) )
 						{
 							spotted = true;
 							continue;
