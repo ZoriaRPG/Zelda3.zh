@@ -1,6 +1,6 @@
 ///////////////////////////
 /// Moving Sentinel FFC ///
-/// v0.1                ///
+/// v0.2                ///
 /// 11th october, 2017  ///
 /// By: ZoriaRPG        ///
 /////////////////////////////////////////////////////////////////////////////
@@ -19,13 +19,15 @@ const int FFC_SENTINEL_MESSAGE_WARP_DELAY = 300;  //Delay between string, and wa
 const int FFC_SENTINEL_SFX_WHISTLE = 63; //Default sound.
 const int FFC_SENTINEL_DEFAULT_STRING = 1; //Default string. 
 
+const int FFC_SENTINEL_SPR_BLANK = 100; //A blank weapon sprite. 
 ffc script MovingSentinel
 {
 	void run(int sfx, int str, int dmap, int scrn, int npcid)
 	{
 		npc n = Screen->CreateNPC(npcid);
 		n->HitWidth = 0; n->HitYOffset = -32768;
-		int dir = -1; bool spotted; int delay; int spotcond;
+		eweapon spotter;
+		int dir = -1; bool spotted; int delay; int spotcond; bool hit;
 		//Sanity checks.
 		if ( sfx < 1 ) sfx = FFC_SENTINEL_SFX_WHISTLE; //Default
 		if ( str < 1 ) str = FFC_SENTINEL_DEFAULT_STRING;
@@ -34,7 +36,38 @@ ffc script MovingSentinel
 			n->Dir = dir; //Lock the NPC to the same dir as this.
 			n->X = this->X; n->Y = this->Y; //Move the npc with this.
 			
-			while ( spotted ) {
+			if ( spotted )
+			{
+				//fire LoS Weapon
+				spotter = Screen->CreateEWeapon(EW_ARROW);#
+				spotter->HitYOffset = -32768;
+				spotter->UseSprite(FFC_SENTINEL_SPR_BLANK); //invisible
+				spotter->X = this->X;
+				spotter->Y = this->Y;
+				spotter->Dir = dir;
+				spotter->Step = 10000;
+			}
+			
+			//A way to ensure that LoS is blocked by any solid object.
+			//Uses an eweapon that is destroyed when it hits a solid object.
+			//If it hits Link, he is spotted. 
+			if ( spotter->isValid() )
+			{
+				if ( Screen->isSolid(spotter->X, spotter->Y)
+				{
+					Remove(spotter);
+				}
+				if ( LinkCollision(spotter) ){
+					Remove(spotter);
+					hit = true;
+				}
+			}
+					
+				
+			
+			while ( hit ) {
+				
+				
 				if ( spotcond == 0 )
 				{
 					delay = FFC_SENTINEL_SOUND_DELAY;
