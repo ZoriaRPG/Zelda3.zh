@@ -1,6 +1,6 @@
 ///////////////////////////
 /// Moving Sentinel FFC ///
-/// v0.4                ///
+/// v0.4.1              ///
 /// 11th october, 2017  ///
 /// By: ZoriaRPG        ///
 /////////////////////////////////////////////////////////////////////////////
@@ -22,9 +22,6 @@ const int FFC_SENTINEL_DEFAULT_STRING = 1; //Default string.
 
 const int FFC_SENTINEL_SPR_BLANK = 88; //A blank weapon sprite. 
 
-const int FFC_SENTINEL_SPOTTER_MISC = 5;
-const int FFC_SENTINEL_SPOTTER_FLAG = 0000010000b;
-				
 				
 ffc script MovingSentinel
 {
@@ -70,8 +67,6 @@ ffc script MovingSentinel
 					spotter->HitWidth = 16; //May be useful for Collision using the actual weapon size. 
 					spotter->HitHeight = 16; 
 					spotter->Dir = dir; //Aim in the direction of the ffc.
-					spotter->Misc[FFC_SENTINEL_SPOTTER_MISC] |= FFC_SENTINEL_SPOTTER_FLAG;
-					
 					
 					spotter->Step = 1600; //Mad-fast for instant-hit.
 						//1600 is one tile per frame. This means that the farther away Link stands, from
