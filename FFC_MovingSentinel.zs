@@ -66,7 +66,7 @@ ffc script MovingSentinel
 			if ( spotter->isValid() )
 			{
 				//If the weapon hits a solid space, remove it. 
-				if ( Screen->isSolid(spotter->X, spotter->Y)
+				if ( Screen->isSolid(spotter->X, spotter->Y) )
 				{
 					Remove(spotter);
 				}
@@ -86,7 +86,7 @@ ffc script MovingSentinel
 				{
 					delay = FFC_SENTINEL_SOUND_DELAY; //Set the timer.
 					NoAction(); //Freeze Link.
-					Game->PlaySound(sfx); //Play the4 sound.
+					Game->PlaySound(sfx); //Play the sound.
 					for ( ; delay > 0; delay-- ) 
 					{
 						WaitNoAction(); //Wait for the duration of the timer.
