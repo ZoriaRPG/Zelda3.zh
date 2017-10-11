@@ -57,7 +57,11 @@ ffc script MovingSentinel
 				spotter->HitWidth = 16; //May be useful for Collision using the actual weapon size. 
 				spotter->HitHeight = 16; 
 				spotter->Dir = dir; //Aim in the direction of the ffc.
-				spotter->Step = 10000; //Mad-fast for instant-hit. 
+				spotter->Step = 1600; //Mad-fast for instant-hit.
+					//1600 is one tile per frame. This means that the farther away Link stands, from
+					// 	a LoS check, the more 'grace' he has in avoiding being seen. 
+					//16000 would be ten tiles per frame. 
+					//25600 would be the screen width in one frame. 
 			}
 			
 			//A way to ensure that LoS is blocked by any solid object.
