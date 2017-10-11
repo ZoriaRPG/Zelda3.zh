@@ -52,6 +52,8 @@ ffc script MovingSentinel
 			n->Dir = dir; //Lock the NPC to the same dir as this.
 			n->X = this->X; n->Y = this->Y; //Move the npc with this.
 			
+			if ( Link->Invisible ) { continue; }
+			
 			//Generate the physical weapon if Link is in LoS of the ffc
 			//to determine if that LoS should be blocked!
 			if ( spotted )
