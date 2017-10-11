@@ -23,7 +23,7 @@ const int FFC_SENTINEL_DEFAULT_STRING = 1; //Default string.
 const int FFC_SENTINEL_SPR_BLANK = 88; //A blank weapon sprite. 
 
 const int FFC_SENTINEL_LOS_GUARD_PRECISION = 7;
-const int FFC_SENTINEL_LOS_WEAPON_PRECISION = 12;
+const int FFC_SENTINEL_LOS_WEAPON_PRECISION = 14;
 
 				
 ffc script MovingSentinel
