@@ -1,7 +1,7 @@
 ///////////////////////////
 /// Moving Sentinel FFC ///
-/// v0.4.3              ///
-/// 11th october, 2017  ///
+/// v0.4.4              ///
+/// 12th october, 2017  ///
 /// By: ZoriaRPG        ///
 /////////////////////////////////////////////////////////////////////////////
 /// A mobile sentry that halts Link when it sees him, and warps him away. ///
@@ -49,8 +49,7 @@ ffc script MovingSentinel
 		//begin infinite loop
 		while(1) 
 		{
-			n->Dir = dir; //Lock the NPC to the same dir as this.
-			n->X = this->X; n->Y = this->Y; //Move the npc with this.
+			
 			
 			if ( Link->Invisible ) { continue; }
 			
@@ -178,6 +177,9 @@ ffc script MovingSentinel
 			{
 				dir = init_dir; //The ffc is NOT moving, so use the static dir. 
 			} 
+			
+			n->Dir = dir; //Lock the NPC to the same dir as this.
+			n->X = this->X; n->Y = this->Y; //Move the npc with this.
 			
 			if ( !spotted )
 			{
