@@ -1,13 +1,26 @@
+import "std.zh"
+
 //Prevents stuniogn weapons from stunlocking npcs. 
-//v0.2
-//7th October, 201
+//v0.3
+//13th October, 201
 //ZoriaRPG
 
-const int SFX_CHINK = 63;
+//Current bug: If Link is standing immediately next to an npc, the boomerang 
+//can collide (in the ZC engine) before the settings are applied to it. This happens on the first frame 
+//or two of its existence. 
 
-const int LW_FLAGS_Z3ENGINE = 4;
-const int LW_FLAG_STUNNING = 0000000000001b;
-const int HITY_OFFSCREEN = -32768;
+const int DEBUG_STUNLOCK 	= 1; //Set to 1 to enable debug verbose mode. 
+
+const int SFX_CHINK 		= 6;
+const int SFX_STUN 		= 51;
+
+const int LW_FLAGS_Z3ENGINE 	= 4;
+const int LW_FLAG_STUNNING 	= 0000000000001b;
+const int HITY_OFFSCREEN 	= -32768;
+
+const int STUN_DUR 		= 200;
+const int STUN_IMMUNITY		= 120; //Frames after unstunning that npc remains immune. 
+
 
 //Pre-Waitdraw
 
@@ -33,13 +46,18 @@ void DoLWeaponNPC_Collision(){
 		//Do npcs first
 		for ( ; npc_count > 0; npc_count-- )
 		{
+			if ( DEBUG_STUNLOCK ) { int s[]="npc_count: "; TraceS(s); Trace(npc_count); }
 			n = Screen->LoadNPC(npc_count);
+			TraceNL(); Trace(n->ID); Trace(n->X); Trace(n->Y);
 			for ( ; lweapon_count > 0; lweapon_count-- )
 			{
+				if ( DEBUG_STUNLOCK ) { int s1[]="lweapon_count: "; TraceS(s1); Trace(lweapon_count); }
 				l = Screen->LoadLWeapon(lweapon_count);
-				if ( Collision(l,n)
+				TraceNL(); Trace(l->ID); Trace(l->X); Trace(l->Y);
+				if ( DistXY(l,n,8) )
 				{
-					AllNpcLWeaponCollisionRoutines(l,n);
+					if ( DEBUG_STUNLOCK ) { int ss[]="Collision"; TraceS(ss); }
+					NpcLWeaponCollisionRoutines(l,n);
 				}
 			}
 		}
@@ -52,9 +70,9 @@ void DoLWeaponNPC_Collision(){
 			for ( ; npc_count > 0; npc_count-- )
 			{ 
 				n = Screen->LoadNPC(npc_count);
-				if ( Collision(l,n)
+				if ( Collision(l,n) )
 				{
-					AllNpcLWeaponCollisionRoutines(l,n);
+					NpcLWeaponCollisionRoutines(l,n);
 					//functions in the form of identifier(l,n)
 				}
 			}
@@ -77,12 +95,12 @@ void MasterLWeaponsLoop(){
 	int counts[7]; 
 	
 	
-	int counts[COUNT_NPCS] = Screen->NumNPCs();
-	int counts[COUNT_LWEAPONS] = Screen->NumLWeapons();
-	int counts[COUNT_EWEAPONS] = Screen->NumEWeapons();
-	int counts[COUNT_COMBOS] = 175; //combo positions. 
-	int counts[COUNT_FFCS] = 32; 
-	int counts[COUNT_ITEMS] = Screen->NumItems();
+	counts[COUNT_NPCS] = Screen->NumNPCs();
+	counts[COUNT_LWEAPONS] = Screen->NumLWeapons();
+	counts[COUNT_EWEAPONS] = Screen->NumEWeapons();
+	counts[COUNT_COMBOS] = 175; //combo positions. 
+	counts[COUNT_FFCS] = 32; 
+	counts[COUNT_ITEMS] = Screen->NumItems();
 	for ( ; counts[COUNT_LWEAPONS] > 0; counts[COUNT_LWEAPONS]-- )
 	{
 		l = Screen->LoadLWeapon(counts[COUNT_LWEAPONS]);
@@ -94,9 +112,13 @@ void MasterLWeaponsLoop(){
 		for ( ; counts[COUNT_NPCS] > 0; counts[COUNT_NPCS]-- )
 		{ 
 			n = Screen->LoadNPC(counts[COUNT_NPCS]);
-			if ( Collision(l,n)
+			if ( DistXY(l,n,8) )
 			{
-				AllNpcLWeaponCollisionRoutines(l,n);
+				if ( DEBUG_STUNLOCK )
+				{
+					int s1[]="Collision found in MasterWeaponsLoop()"; TraceS(s1);
+				}
+				NpcLWeaponCollisionRoutines(l,n);
 				//functions in the form of identifier(l,n)
 			}
 		}
@@ -146,22 +168,68 @@ void MasterLWeaponsLoop(){
 		
 	}
 }
-				
+	
 
+void MasterEnemiesLoop()
+{
+	lweapon l; npc n; item i; eweapon e; ffc f;
+	int counts[7]; 
+	
+	
+	counts[COUNT_NPCS] = Screen->NumNPCs();
+	counts[COUNT_LWEAPONS] = Screen->NumLWeapons();
+	counts[COUNT_EWEAPONS] = Screen->NumEWeapons();
+	counts[COUNT_COMBOS] = 175; //combo positions. 
+	counts[COUNT_FFCS] = 32; 
+	counts[COUNT_ITEMS] = Screen->NumItems();
+	
+	//Enemy General Changes
+	for ( ; counts[COUNT_NPCS] > 0; counts[COUNT_NPCS]-- )
+	{
+		n = Screen->LoadNPC(counts[COUNT_NPCS]);
+		DecrementStun(n);
+		
+	}
+	
+}
+	
 //Global active script. 
 global script Z3_active{
 	void run(){
 		while(true){
+			EnemySetupRoutines();
 			MasterLWeaponsLoop();
 			
+			MasterEnemiesLoop();
 			Waitdraw();
-			
+			Waitframe();
 			//cleanup and verification. 
 		}
 	}
 }
-			
 
+const int NPC_MISC_STUN = 8;
+	
+void EnemySetupRoutines(){
+	int numnpcs = Screen->NumNPCs(); npc n;
+	for ( ; numnpcs > 0; numnpcs-- )
+	{
+		n = Screen->LoadNPC(numnpcs);
+		n->Misc[NPC_MISC_STUN] = n->Stun;
+	}
+}
+
+int GetStun(npc n){
+	return n->Misc[NPC_MISC_STUN];
+}
+
+void SetStun(npc n){ n->Misc[NPC_MISC_STUN] = STUN_IMMUNITY + STUN_DUR; }
+
+
+void DecrementStun(npc n)
+{
+	if ( n->Misc[NPC_MISC_STUN] > 0 ) n->Misc[NPC_MISC_STUN]--;
+}
 //Sub-routines. 
 
 //This is a container for all of the lweapon and npc routines that run on collision, after
@@ -196,17 +264,28 @@ void StunNPCThisFrame(lweapon l)
 }
 
 //Sets a stun flag and adjusts the hitbox position. 
-void SetStunning(lweapon l, bool canstun){
+void _SetStunning(lweapon l, bool canstun){
 	if ( canstun )
 	{
 		l->Misc[LW_FLAGS_Z3ENGINE]|=LW_FLAG_STUNNING;
-		MoveWeaponHitbox(l,true);
+		MoveWeaponHitbox(l,false);
 		}
 	else 
 	{
 		l->Misc[LW_FLAGS_Z3ENGINE]&=~LW_FLAG_STUNNING;
-		MoveWeaponHitbox(l,false);
+		MoveWeaponHitbox(l,true);
 	}
+}
+
+//Sets a stun flag and adjusts the hitbox position. 
+void SetStunning(lweapon l){
+	l->Misc[LW_FLAGS_Z3ENGINE]|=LW_FLAG_STUNNING;
+	l->HitYOffset = HITY_OFFSCREEN;
+	
+}
+
+bool GetStunning(lweapon l){
+	return ( l->Misc[LW_FLAGS_Z3ENGINE]&LW_FLAG_STUNNING);
 }
 
 
@@ -216,27 +295,54 @@ void MarkStunningWeapons(lweapon l){
 	{
 		if ( l->ID == LW_BRANG || l->ID == LW_HOOKSHOT ) 
 		{	
-			SetStunning(l,true); //Move the hitbox offscreen and mark the flag. 
+			SetStunning(l); //Move the hitbox offscreen and mark the flag. 
 		}
 	}
 }
 
 //Forces a stunning weapon to not stun,a nd to bounce. 
-void BlockStun(lweapon l)
+void BlockStun(lweapon l, npc n)
 {
-	MoveWeaponHitbox(l,true);
+	//MoveWeaponHitbox(l,true);
 	Game->PlaySound(SFX_CHINK);
 	l->DeadState = WDS_BOUNCE;
+	n->Stun = GetStun(n);
 }
+
+
 
 //Sets the correct stun variables to lweapons of the npc is not stunned. 
 void StunCollision(lweapon l, npc n)
 {
-	if ( !n->Stun )
+	if ( DEBUG_STUNLOCK ) { int ss[]="GetStun() is: "; TraceS(ss); Trace(GetStun(n)); }
+	if ( !n->Stun ) //THis is not working. The stun value is 0, and it is not updating soon enough.
 	{
-		StunNPCThisFrame(l);
+		if ( GetStun(n) <= 0 ) 
+		{
+			//StunNPCThisFrame(l);
+			n->Stun = STUN_DUR;
+			Game->PlaySound(SFX_STUN);
+			l->DeadState = WDS_BOUNCE;
+			SetStun(n);
+		}
+			
 	}
-	
-	else BlockStun(l);
+	else
+	{
+		Game->PlaySound(SFX_CHINK);
+		l->DeadState = WDS_BOUNCE;
+		//n->Stun = GetStun(n);
+	}
+	//else BlockStun(l, n);
 }
 		
+bool DistXY(lweapon a, npc b, int distance) {
+	int distx; int disty;
+	if ( a->X > b->X ) distx = a->X - b->X;
+	else distx = b->X - a->X;
+	
+	if ( a->Y > b->Y ) disty = a->Y - b->Y;
+	else disty = b->Y - a->Y;
+
+	return ( distx <= distance && disty <= distance );
+} 
