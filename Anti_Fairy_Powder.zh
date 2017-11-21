@@ -102,7 +102,7 @@ ffc script WallBouncer
 	    }
 	    
 	    //Transformation
-	    if ( faerie ) 
+	    if ( faerie[0] ) 
 	    {
 		    faerie[1] = ghost->X;
 		    faerie[2] = ghost->Y;
