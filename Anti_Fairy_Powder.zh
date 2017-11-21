@@ -5,25 +5,28 @@
 // import "ghost.zh"
 
 // npc->Attributes[] indices
-const int WB_ATTR_TILE_WIDTH = 2;
-const int WB_ATTR_TILE_HEIGHT = 3;
-const int WB_ATTR_IGNORE_WATER = 4;
-const int WB_ATTR_IGNORE_PITS = 5;
+const int WB_ATTR_TILE_WIDTH 		= 2;
+const int WB_ATTR_TILE_HEIGHT 		= 3;
+const int WB_ATTR_IGNORE_WATER 		= 4;
+const int WB_ATTR_IGNORE_PITS 		= 5;
 
 //Magic powder settings.
-const int WEAP_MAGIC_POWDER_SPRITE = 60; //Set this to the sprite ID that you wish to use.
-const int WEAP_MAGIC_POWDER_DIST = 10; //The distance away from Link to create the weapon. 
-const int WEAP_MAGIC_POWDER_MISC_INDEX = 1; //The misc index to use for lweapon flag storage. 
-const int WEAP_MAGIC_POWDER_MISC_FLAG = 000100b; //The flag for the magic powder. 
+const int WEAP_MAGIC_POWDER_SPRITE 	= 60; //Set this to the sprite ID that you wish to use.
+const int WEAP_MAGIC_POWDER_DIST 	= 10; //The distance away from Link to create the weapon. 
+const int WEAP_MAGIC_POWDER_MISC_INDEX 	= 1; //The misc index to use for lweapon flag storage. 
+const int WEAP_MAGIC_POWDER_MISC_FLAG 	= 000100b; //The flag for the magic powder. 
+const int SFX_MAGICDUST 		= 63; //Sound for the Magic Powder
 
 item script MagicPowder
 {
 	void run()
 	{
 		//Magic powder is a sparkle-class weapon, so we are using a flag to (later) compare for it. 
+		Link->Action = LA_ATTACKING; 
 		lweapon dust = NextToLink(LW_SPARKLE, int WEAP_MAGIC_POWDER_DIST);
 		dust->UseSprite(WEAP_MAGIC_POWDER_SPRITE);
 		dist->Misc[WEAP_MAGIC_POWDER_MISC_INDEX] |= WEAP_MAGIC_POWDER_MISC_FLAG;
+		Game->PlaySound(SFX_MAGICDUST);
 	}
 }
 	
