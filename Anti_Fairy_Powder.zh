@@ -96,8 +96,8 @@ ffc script WallBouncer
 		    if ( q->ID != LW_SPARKLE ) { continue; }
 		    if ( q->Misc[WEAP_MAGIC_POWDER_MISC_INDEX]&WEAP_MAGIC_POWDER_MISC_FLAG ) //matches magic powder flag set from the item script
 		    {
-			if ( Collision(lw, this) ) faerie[0] = 1;
-			if ( COllision(lw, ghost) ) faerie[0] = 1;
+			if ( Collision(lw, this) ) { faerie[0] = 1; break; }
+			if ( Collision(lw, ghost) ) { faerie[0] = 1; break; }
 		    }
 	    }
 	    
