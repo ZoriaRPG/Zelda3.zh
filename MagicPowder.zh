@@ -1,0 +1,16 @@
+const int WEAP_MAGIC_POWDER_SPRITE = 60;
+const int WEAP_MAGIC_POWDER_DISTX = 10;
+const int WEAP_MAGIC_POWDER_DISTY = 10;
+const int WEAP_MAGIC_POWDER_MISC_INDEX = 1;
+const int WEAP_MAGIC_POWDER_MISC_FLAG = 000100b;
+
+item script MagicPowder
+{
+	void run()
+	{
+		lweapon dust = NextToLink(LW_SPARKLE, int WEAP_MAGIC_POWDER_DISTX, WEAP_MAGIC_POWDER_DISTY);
+		dust->UseSprite(WEAP_MAGIC_POWDER_SPRITE);
+		dist->Misc[WEAP_MAGIC_POWDER_MISC_INDEX] |= WEAP_MAGIC_POWDER_MISC_FLAG;
+	}
+}
+		
