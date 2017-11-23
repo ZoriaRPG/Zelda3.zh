@@ -21,17 +21,17 @@ item script MagicPowder
 {
 	void run()
 	{
-		//Magic powder is a sparkle-class weapon, so we are using a flag to (later) compare for it. 
+c		//Magic powder is a sparkle-class weapon, so we are using a flag to (later) compare for it. 
 		Link->Action = LA_ATTACKING; 
-		lweapon dust = NextToLink(LW_SPARKLE, int WEAP_MAGIC_POWDER_DIST);
+		lweapon dust = NextToLink(LW_SPARKLE, WEAP_MAGIC_POWDER_DIST);
 		dust->UseSprite(WEAP_MAGIC_POWDER_SPRITE);
-		dist->Misc[WEAP_MAGIC_POWDER_MISC_INDEX] |= WEAP_MAGIC_POWDER_MISC_FLAG;
+		dust->Misc[WEAP_MAGIC_POWDER_MISC_INDEX] |= WEAP_MAGIC_POWDER_MISC_FLAG;
 		Game->PlaySound(SFX_MAGICDUST);
 	}
 }
 	
 
-ffc script WallBouncer
+ffc script AntiFairy //Changing the script name, for this application. 
 {
     void run(int enemyID)
     {
@@ -63,7 +63,7 @@ ffc script WallBouncer
         
         xStep=step*Cos(angle);
         yStep=step*Sin(angle);
-	int faerie[3];
+	int become_faerie; //Using a simple var now, because the array indices were extraneous, and this is faster in run-time.
         
         while(true)
         {
@@ -92,47 +92,50 @@ ffc script WallBouncer
             
             // And move
 	    
-	    //Check for magic power interaction:
+	    //Check for 'Magic Power' interaction:
 	    for ( int q = Screen->NumLWeapons(); q > 0; --q )
 	    {
 		    lweapon lw = Screen->LoadLWeapon(q);
 		    if ( q->ID != LW_SPARKLE ) { continue; }
-		    if ( q->Misc[WEAP_MAGIC_POWDER_MISC_INDEX]&WEAP_MAGIC_POWDER_MISC_FLAG ) //matches magic powder flag set from the item script
+		    if ( q->Misc[WEAP_MAGIC_POWDER_MISC_INDEX]&WEAP_MAGIC_POWDER_MISC_FLAG ) //matches against the magic powder flag set from the item script
 		    {
-			if ( Collision(lw, this) ) { faerie[0] = 1; break; }
-			if ( Collision(lw, ghost) ) { faerie[0] = 1; break; }
+			if ( Collision(lw, this) ) { become_faerie = 1; break; }
+			if ( Collision(lw, ghost) ) { become_faerie = 1; break; }
 		    }
 	    }
 	    
 	    //Transformation
-	    if ( faerie[0] ) 
+	    if ( become_faerie ) 
 	    {
-		    faerie[1] = ghost->X;
-		    faerie[2] = ghost->Y;
 		    item fairy = Screen->CreateItem(I_FAIRY);
-		    fairy->X = faerie[1];
-		    fairy->Y = faerie[2];
-		    Kill(this,ghost);
+		    fairy->X = ghost->X; //These do not need to be array indices. Changing them to use the base struct members. -Z
+		    fairy->Y = ghost->Y;
+		    ___kill(this,ghost);
 		    
 	    }
             Ghost_MoveXY(xStep, yStep, 3);
             Ghost_Waitframe(this, ghost, true, true);
         }
     }
-    void kill(ffc a, npc b)
+    //Kills a ghosted enemy. 
+    void ___kill(ffc a, npc b)
     {
 	    ___kill(a); ___kill(b);
 	    Quit();
     }
+    //Kills any npc, with no death effect.
     void ___kill(npc n)
     {
 	    n->HP = HP_SILENT; 
 	    Remove(n);
     }
+    //Clears an ffc to default system params. Note that ffc->Link was broken prior to 2.53, 
+    //and it is not possible for a script to set *its own* script ID to 0. 
     void ___kill(ffc f)
     {
 	f->Data = 0;
-	f->Script = 0;
+	f->Script = 0; //This will only work if ___kill(ffc) is called from another script.  
+	    //e.g., AntiFairy.___kill(ffc)
 	f->CSet = 0;
 	f->Delay = 0;
 	f->X = 0;
