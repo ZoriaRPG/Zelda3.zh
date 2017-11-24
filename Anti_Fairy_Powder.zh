@@ -96,8 +96,8 @@ ffc script AntiFairy //Changing the script name, for this application.
 	    for ( int q = Screen->NumLWeapons(); q > 0; --q )
 	    {
 		    lweapon lw = Screen->LoadLWeapon(q);
-		    if ( q->ID != LW_SPARKLE ) { continue; }
-		    if ( q->Misc[WEAP_MAGIC_POWDER_MISC_INDEX]&WEAP_MAGIC_POWDER_MISC_FLAG ) //matches against the magic powder flag set from the item script
+		    if ( lw->ID != LW_SPARKLE ) { continue; }
+		    if ( lw->Misc[WEAP_MAGIC_POWDER_MISC_INDEX]&WEAP_MAGIC_POWDER_MISC_FLAG ) //matches against the magic powder flag set from the item script
 		    {
 			if ( Collision(lw, this) ) { become_faerie = 1; break; }
 			if ( Collision(lw, ghost) ) { become_faerie = 1; break; }
