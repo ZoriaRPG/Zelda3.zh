@@ -1,9 +1,9 @@
 //Magic powder settings.
-const int WEAP_MAGIC_POWDER_SPRITE 	= 60; //Set this to the sprite ID that you wish to use.
-const int WEAP_MAGIC_POWDER_DIST 	= 10; //The distance away from Link to create the weapon. 
+//const int WEAP_MAGIC_POWDER_SPRITE 	= 35; //Set this to the sprite ID that you wish to use. //Moved to item editor. -Z
+//const int WEAP_MAGIC_POWDER_DIST 	= 4; //The distance away from Link to create the weapon. //Moved to item editor. -Z
 const int WEAP_MAGIC_POWDER_MISC_INDEX 	= 1; //The misc index to use for lweapon flag storage. 
 const int WEAP_MAGIC_POWDER_MISC_FLAG 	= 000100b; //The flag for the magic powder. 
-const int SFX_MAGICDUST 		= 63; //Sound for the Magic Powder
+//const int SFX_MAGICDUST 		= 44; //Sound for the Magic Powder //Moved to item editor. -Z
 
 //The size of Link's sprite. 
 const int WEAP_MAGIC_POWDER_LINK_TILEHEIGHT = 16;
@@ -15,31 +15,35 @@ item script MagicPowder
 	{
 		Link->Action = LA_ATTACKING;
 		lweapon dust = Screen->CreateLWeapon(LW_SPARKLE);
-		dust->UseSprite(WEAP_MAGIC_POWDER_SPRITE);
+		dust->UseSprite(this->Sprites[0]);
 		switch(Link->Dir)
 		{
 			case DIR_UP:
 			{
 				dust->X = Link->X; 
-				dust->Y = (Link->Y - (WEAP_MAGIC_POWDER_LINK_TILEHEIGHT/2) - WEAP_MAGIC_POWDER_DIST);
+				dust->Y = (Link->Y - (WEAP_MAGIC_POWDER_LINK_TILEHEIGHT/2) - this->Attributes[0]);
+				Trace(dust->X); Trace(dust->Y);
 				break;
 			}
 			case DIR_DOWN:
 			{
 				dust->X = Link->X; 
-				dust->Y = (Link->Y + (WEAP_MAGIC_POWDER_LINK_TILEHEIGHT/2) + WEAP_MAGIC_POWDER_DIST);
+				dust->Y = (Link->Y + (WEAP_MAGIC_POWDER_LINK_TILEHEIGHT/2) + this->Attributes[0]);
+				Trace(dust->X); Trace(dust->Y);
 				break;
 			}
 			case DIR_LEFT:
 			{
-				dust->X = (Link->X - (WEAP_MAGIC_POWDER_LINK_TILEWIDTH/2) - WEAP_MAGIC_POWDER_DIST); 
+				dust->X = (Link->X - (WEAP_MAGIC_POWDER_LINK_TILEWIDTH/2) - this->Attributes[0]); 
 				dust->Y = Link->Y;
+				Trace(dust->X); Trace(dust->Y);
 				break;
 			}
 			case DIR_RIGHT:
 			{
-				dust->X = (Link->X + (WEAP_MAGIC_POWDER_LINK_TILEWIDTH/2) + WEAP_MAGIC_POWDER_DIST); 
+				dust->X = (Link->X + (WEAP_MAGIC_POWDER_LINK_TILEWIDTH/2) + this->Attributes[0]); 
 				dust->Y = Link->Y;
+				Trace(dust->X); Trace(dust->Y);
 				break;
 			}
 			default:
@@ -49,7 +53,7 @@ item script MagicPowder
 		}
 		
 		dust->Misc[WEAP_MAGIC_POWDER_MISC_INDEX] |= WEAP_MAGIC_POWDER_MISC_FLAG;
-		Game->PlaySound(SFX_MAGICDUST);
+		Game->PlaySound(this->UseSound);
 	}
 }
 		
