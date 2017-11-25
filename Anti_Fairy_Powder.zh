@@ -30,19 +30,23 @@ c		//Magic powder is a sparkle-class weapon, so we are using a flag to (later) c
 		lweapon dust = Screen->CreateLWeapon(LW_SPARKLE);
 		if ( Link->Dir == DIR_UP )
 		{
-			dust->X = Link->X; dust->Y = Link->Y - WEAP_MAGIC_POWDER_DIST;
+			dust->X = Link->X; 
+			dust->Y = Max((Link->Y - WEAP_MAGIC_POWDER_DIST),0);
 		}
 		else if ( Link->Dir == DIR_DOWN )
 		{
-			dust->X = Link->X; dust->Y = Link->Y + WEAP_MAGIC_POWDER_LINK_TILEHEIGHT + WEAP_MAGIC_POWDER_DIST;
+			dust->X = Link->X; 
+			dust->Y = Min((Link->Y + WEAP_MAGIC_POWDER_LINK_TILEHEIGHT + WEAP_MAGIC_POWDER_DIST),160);
 		}
 		else if ( Link->Dir == DIR_LEFT )
 		{
-			dust->X = Link->X - WEAP_MAGIC_POWDER_DIST; dust->Y = Link->Y;
+			dust->X = Max((Link->X - WEAP_MAGIC_POWDER_DIST), 0); 
+			dust->Y = Link->Y;
 		}
 		else if ( Link->Dir == DIR_RIGHT )
 		{
-			dust->X = Link->X + WEAP_MAGIC_POWDER_LINK_TILEWIDTH + WEAP_MAGIC_POWDER_DIST; dust->Y = Link->Y;
+			dust->X = Min((Link->X + WEAP_MAGIC_POWDER_LINK_TILEWIDTH + WEAP_MAGIC_POWDER_DIST), 240); 
+			dust->Y = Link->Y;
 		}
 		else //default
 		{
