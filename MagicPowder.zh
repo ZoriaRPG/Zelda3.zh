@@ -20,6 +20,7 @@ item script MagicPowder
 		{
 			case DIR_UP:
 			{
+				dust->HitXOffset = 0; dust->HitYOffset = 0; dust->DrawXOffset = 0; dust->DrawYOffset = 0;
 				dust->X = Link->X; 
 				dust->Y = (Link->Y - (WEAP_MAGIC_POWDER_LINK_TILEHEIGHT/2) - this->Attributes[0]);
 				Trace(dust->X); Trace(dust->Y);
@@ -27,6 +28,7 @@ item script MagicPowder
 			}
 			case DIR_DOWN:
 			{
+				dust->HitXOffset = 0; dust->HitYOffset = 0; dust->DrawXOffset = 0; dust->DrawYOffset = 0;
 				dust->X = Link->X; 
 				dust->Y = (Link->Y + (WEAP_MAGIC_POWDER_LINK_TILEHEIGHT/2) + this->Attributes[0]);
 				Trace(dust->X); Trace(dust->Y);
@@ -34,6 +36,7 @@ item script MagicPowder
 			}
 			case DIR_LEFT:
 			{
+				dust->HitXOffset = 0; dust->HitYOffset = 0; dust->DrawXOffset = 0; dust->DrawYOffset = 0;
 				dust->X = (Link->X - (WEAP_MAGIC_POWDER_LINK_TILEWIDTH/2) - this->Attributes[0]); 
 				dust->Y = Link->Y;
 				Trace(dust->X); Trace(dust->Y);
@@ -41,6 +44,7 @@ item script MagicPowder
 			}
 			case DIR_RIGHT:
 			{
+				dust->HitXOffset = 0; dust->HitYOffset = 0; dust->DrawXOffset = 0; dust->DrawYOffset = 0;
 				dust->X = (Link->X + (WEAP_MAGIC_POWDER_LINK_TILEWIDTH/2) + this->Attributes[0]); 
 				dust->Y = Link->Y;
 				Trace(dust->X); Trace(dust->Y);
