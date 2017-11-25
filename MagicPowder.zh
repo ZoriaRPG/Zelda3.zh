@@ -15,29 +15,30 @@ item script MagicPowder
 	{
 		Link->Action = LA_ATTACKING;
 		lweapon dust = Screen->CreateLWeapon(LW_SPARKLE);
+		dust->UseSprite(WEAP_MAGIC_POWDER_SPRITE);
 		switch(Link->Dir)
 		{
 			case DIR_UP:
 			{
 				dust->X = Link->X; 
-				dust->Y = Link->Y + WEAP_MAGIC_POWDER_LINK_TILEHEIGHT + WEAP_MAGIC_POWDER_DIST;
+				dust->Y = (Link->Y - (WEAP_MAGIC_POWDER_LINK_TILEHEIGHT/2) - WEAP_MAGIC_POWDER_DIST);
 				break;
 			}
 			case DIR_DOWN:
 			{
 				dust->X = Link->X; 
-				dust->Y = Link->Y + WEAP_MAGIC_POWDER_LINK_TILEHEIGHT + WEAP_MAGIC_POWDER_DIST;
+				dust->Y = (Link->Y + (WEAP_MAGIC_POWDER_LINK_TILEHEIGHT/2) + WEAP_MAGIC_POWDER_DIST);
 				break;
 			}
 			case DIR_LEFT:
 			{
-				dust->X = Link->X; 
-				dust->Y = Link->Y + WEAP_MAGIC_POWDER_LINK_TILEHEIGHT + WEAP_MAGIC_POWDER_DIST;
+				dust->X = (Link->X - (WEAP_MAGIC_POWDER_LINK_TILEWIDTH/2) - WEAP_MAGIC_POWDER_DIST); 
+				dust->Y = Link->Y;
 				break;
 			}
 			case DIR_RIGHT:
 			{
-				dust->X = Link->X + WEAP_MAGIC_POWDER_LINK_TILEWIDTH + WEAP_MAGIC_POWDER_DIST; 
+				dust->X = (Link->X + (WEAP_MAGIC_POWDER_LINK_TILEWIDTH/2) + WEAP_MAGIC_POWDER_DIST); 
 				dust->Y = Link->Y;
 				break;
 			}
@@ -46,7 +47,7 @@ item script MagicPowder
 				dust->X = Link->X; dust->Y = Link->Y; break;
 			}
 		}
-		dust->UseSprite(WEAP_MAGIC_POWDER_SPRITE);
+		
 		dust->Misc[WEAP_MAGIC_POWDER_MISC_INDEX] |= WEAP_MAGIC_POWDER_MISC_FLAG;
 		Game->PlaySound(SFX_MAGICDUST);
 	}
