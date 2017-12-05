@@ -1,0 +1,21 @@
+Boss Aghaninim needs the script Aghanim.z and the script Lightning.z to work propely.
+Tiles is on page 185 in the test file for Aghanim.
+There is some Weapons/Misc sprites that also need to be setuped also like 
+Sprite 105 = Ball After image
+
+Combos 20436 - 20463
+are for Aghanim as well.
+
+The setup is not easy so i wish some one could write a more proper setup.txt
+for it.I had to trace everything in the scripts to see what does what.
+
+To figure out how it works.
+And one more thing fill the room with flags 99 on the floor otherwise it will not spawn at
+all.
+
+Play the test file take the red portal in the file and go north couple rooms to 
+face Aghanim.
+
+Sorry about my very bad english 
+
+Judasrising
