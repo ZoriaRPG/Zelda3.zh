@@ -286,7 +286,7 @@ ffc script LightningCaller
 		Remove(Noob);
 		Args[0] = 90;
 		Args[1] = ImpactCombo;
-		ffc meh = Screen->LoadFFC(RunFFCScript(59, Args));
+		ffc meh = Screen->LoadFFC(RunFFCScript(36, Args));
 		meh->X = X;
 		meh->Y = Y;
 		int angle = Rand(0, 89);
@@ -301,10 +301,10 @@ ffc script LightningCaller
 				Waitframe();
 			}
 			Round(length);
-			ffc meh2 = Screen->LoadFFC(RunFFCScript(59, Args));
-			ffc meh3 = Screen->LoadFFC(RunFFCScript(59, Args));
-			ffc meh4 = Screen->LoadFFC(RunFFCScript(59, Args));
-			ffc meh5 = Screen->LoadFFC(RunFFCScript(59, Args));
+			ffc meh2 = Screen->LoadFFC(RunFFCScript(36, Args));
+			ffc meh3 = Screen->LoadFFC(RunFFCScript(36, Args));
+			ffc meh4 = Screen->LoadFFC(RunFFCScript(36, Args));
+			ffc meh5 = Screen->LoadFFC(RunFFCScript(36, Args));
 			meh2->X = X + VectorX(length, angle);
 			meh2->Y = Y + VectorY(length, angle);
 			meh3->X = X + VectorX(length, angle + 90);

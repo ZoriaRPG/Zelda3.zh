@@ -1,12 +1,22 @@
-//Dimentio
-
-const int Agahnim1IntroString = 101;
-const int Agahnim1DefeatString = 104;
+const int Agahnim1IntroString = 15;
+const int Agahnim1DefeatString = 16;
 const int AgahnimFireballSplitSFX = 32;
-const int AgahnimChargeSFX = 83;
-const int AgahnimDashSFX = 85;
-const int AgahnimFireSFX = 84;
-const int AgahnimLightningSFX = 
+const int AgahnimChargeSFX = 103;
+const int AgahnimDashSFX = 105;
+const int AgahnimFireSFX = 104;
+const int AgahnimLightningSFX = 106;
+/////////////////////////////////////////////////
+const int BARI_SHOCK_TIME         = 30;
+const int BARI_SFX_SHOCK          = 89;
+const int BARI_WPS_SHOCK          = 94;
+
+// npc->Attributes[] index
+const int BARI_ATTR_SHOCK_CHANCE  = 5;
+const int BARI_ATTR_SHOCK_TIME    = 7;
+
+// ffc->Misc[] index
+const int BARI_IDX_SHOCKING       = 0;
+//////////////////////////////////////////////////
 
 ffc script Aghanim{
 	void run(int enemyid){
@@ -48,7 +58,7 @@ ffc script Aghanim{
 			Args[0] = 33;
 			int lightning[] = "BossMusicBeatableOnly";
 			int script_num = Game->GetFFCScript(lightning); //Lightning is a script.
-			Screen->LoadFFC(RunFFCScript(script_num, Args));
+			Screen->LoadFFC(RunFFCScript(34, Args));
 		}
 		for (int i = 30; i > 0; i--) //30 frames pass by
 		{
@@ -90,11 +100,11 @@ ffc script Aghanim{
 						ZoomX[0] = Ghost_X + 16;
 						ZoomY[0] = Ghost_Y + 16;
 					}
-					if (ZoomX[0] != 0) DrawCombo(2, ZoomX[0], ZoomY[0], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64); //Make sure it's not 0 before drawing afterimages
-					if (ZoomX[1] != 0) DrawCombo(2, ZoomX[1], ZoomY[1], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-					if (ZoomX[2] != 0) DrawCombo(2, ZoomX[2], ZoomY[2], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-					if (ZoomX[3] != 0) DrawCombo(2, ZoomX[3], ZoomY[3], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-					if (ZoomX[4] != 0) DrawCombo(2, ZoomX[4], ZoomY[4], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+					if (ZoomX[0] != 0) Screen->DrawCombo(2, ZoomX[0], ZoomY[0], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64); //Make sure it's not 0 before drawing afterimages
+					if (ZoomX[1] != 0) Screen->DrawCombo(2, ZoomX[1], ZoomY[1], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+					if (ZoomX[2] != 0) Screen->DrawCombo(2, ZoomX[2], ZoomY[2], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+					if (ZoomX[3] != 0) Screen->DrawCombo(2, ZoomX[3], ZoomY[3], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+					if (ZoomX[4] != 0) Screen->DrawCombo(2, ZoomX[4], ZoomY[4], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
 					DarkWait(this, ghost);
 				}
 				if (Ghost_HP <= (MaxHP / 4)) Fakeoutmax = 3; //If he's down to his last breath, he can use up to 3 fake outs before before forced to mirror ball
@@ -106,11 +116,11 @@ ffc script Aghanim{
 				ShiftArray(ZoomY);
 				ZoomX[0] = Ghost_X + 16;
 				ZoomY[0] = Ghost_Y + 16;
-				if (ZoomX[0] != 0) DrawCombo(2, ZoomX[0], ZoomY[0], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64); //Make sure not 0 before drawing.
-				if (ZoomX[1] != 0) DrawCombo(2, ZoomX[1], ZoomY[1], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-				if (ZoomX[2] != 0) DrawCombo(2, ZoomX[2], ZoomY[2], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-				if (ZoomX[3] != 0) DrawCombo(2, ZoomX[3], ZoomY[3], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-				if (ZoomX[4] != 0) DrawCombo(2, ZoomX[4], ZoomY[4], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+				if (ZoomX[0] != 0) Screen->DrawCombo(2, ZoomX[0], ZoomY[0], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64); //Make sure not 0 before drawing.
+				if (ZoomX[1] != 0) Screen->DrawCombo(2, ZoomX[1], ZoomY[1], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+				if (ZoomX[2] != 0) Screen->DrawCombo(2, ZoomX[2], ZoomY[2], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+				if (ZoomX[3] != 0) Screen->DrawCombo(2, ZoomX[3], ZoomY[3], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+				if (ZoomX[4] != 0) Screen->DrawCombo(2, ZoomX[4], ZoomY[4], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
 				DarkWait(this, ghost);
 				do //Wait for the afterimages to fade.
 				{
@@ -123,12 +133,12 @@ ffc script Aghanim{
 						ZoomX[0] = 0;
 						ZoomY[0] = 0;
 					}
-					if (ZoomX[0] != 0) DrawCombo(2, ZoomX[0], ZoomY[0], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-					if (ZoomX[1] != 0) DrawCombo(2, ZoomX[1], ZoomY[1], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-					if (ZoomX[2] != 0) DrawCombo(2, ZoomX[2], ZoomY[2], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+					if (ZoomX[0] != 0) Screen->DrawCombo(2, ZoomX[0], ZoomY[0], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+					if (ZoomX[1] != 0) Screen->DrawCombo(2, ZoomX[1], ZoomY[1], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+					if (ZoomX[2] != 0) Screen->DrawCombo(2, ZoomX[2], ZoomY[2], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
 					else ghost->CollDetection = true; //Turn on collision once he's down to only 2 afterimages.
-					if (ZoomX[3] != 0) DrawCombo(2, ZoomX[3], ZoomY[3], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-					if (ZoomX[4] != 0) DrawCombo(2, ZoomX[4], ZoomY[4], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+					if (ZoomX[3] != 0) Screen->DrawCombo(2, ZoomX[3], ZoomY[3], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+					if (ZoomX[4] != 0) Screen->DrawCombo(2, ZoomX[4], ZoomY[4], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
 					DarkWait(this, ghost);
 				}while (ZoomX[4] != 0)
 				for (int i = 30; i > 0; i--)
@@ -176,9 +186,9 @@ ffc script Aghanim{
 					Ghost_Dir = AngleDir8(Angle(Ghost_X + 8, Ghost_Y + 8, Link->X, Link->Y));
 					DarkWait(this, ghost);
 				}
-				int Args[8]; //Attacks are an FFC Script. Script 57 is WizardBall.
+				int Args[8]; //Attacks are an FFC Script. Script 38 is WizardBall.
 				Args[0] = Attack - 1;
-				ffc meh = Screen->LoadFFC(RunFFCScript(57, Args)); 
+				ffc meh = Screen->LoadFFC(RunFFCScript(38, Args)); 
 				if (Attack == 1) meh->Data = BallData + 2; //Set the appearance of the ball.
 				else if (Attack == 2) meh->Data = BallData + 3;
 				meh->CSet = 7; //Set CSet.
@@ -245,11 +255,11 @@ ffc script Aghanim{
 						ZoomX[0] = Ghost_X + 16;
 						ZoomY[0] = Ghost_Y + 16;
 					}
-					if (ZoomX[0] != 0) DrawCombo(2, ZoomX[0], ZoomY[0], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-					if (ZoomX[1] != 0) DrawCombo(2, ZoomX[1], ZoomY[1], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-					if (ZoomX[2] != 0) DrawCombo(2, ZoomX[2], ZoomY[2], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-					if (ZoomX[3] != 0) DrawCombo(2, ZoomX[3], ZoomY[3], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-					if (ZoomX[4] != 0) DrawCombo(2, ZoomX[4], ZoomY[4], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+					if (ZoomX[0] != 0) Screen->DrawCombo(2, ZoomX[0], ZoomY[0], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+					if (ZoomX[1] != 0) Screen->DrawCombo(2, ZoomX[1], ZoomY[1], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+					if (ZoomX[2] != 0) Screen->DrawCombo(2, ZoomX[2], ZoomY[2], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+					if (ZoomX[3] != 0) Screen->DrawCombo(2, ZoomX[3], ZoomY[3], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+					if (ZoomX[4] != 0) Screen->DrawCombo(2, ZoomX[4], ZoomY[4], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
 					DarkWait(this, ghost);
 				}
 				if (Ghost_HP <= (MaxHP / 4)) Fakeoutmax = 3; //Copypaste code because too lazy to remove.
@@ -262,11 +272,11 @@ ffc script Aghanim{
 				ShiftArray(ZoomY);
 				ZoomX[0] = Ghost_X + 16;
 				ZoomY[0] = Ghost_Y + 16;
-				if (ZoomX[0] != 0) DrawCombo(2, ZoomX[0], ZoomY[0], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-				if (ZoomX[1] != 0) DrawCombo(2, ZoomX[1], ZoomY[1], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-				if (ZoomX[2] != 0) DrawCombo(2, ZoomX[2], ZoomY[2], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-				if (ZoomX[3] != 0) DrawCombo(2, ZoomX[3], ZoomY[3], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-				if (ZoomX[4] != 0) DrawCombo(2, ZoomX[4], ZoomY[4], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+				if (ZoomX[0] != 0) Screen->DrawCombo(2, ZoomX[0], ZoomY[0], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+				if (ZoomX[1] != 0) Screen->DrawCombo(2, ZoomX[1], ZoomY[1], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+				if (ZoomX[2] != 0) Screen->DrawCombo(2, ZoomX[2], ZoomY[2], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+				if (ZoomX[3] != 0) Screen->DrawCombo(2, ZoomX[3], ZoomY[3], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+				if (ZoomX[4] != 0) Screen->DrawCombo(2, ZoomX[4], ZoomY[4], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
 				DarkWait(this, ghost);
 				do //Clean up the afterimages
 				{
@@ -279,12 +289,12 @@ ffc script Aghanim{
 						ZoomX[0] = 0;
 						ZoomY[0] = 0;
 					}
-					if (ZoomX[0] != 0) DrawCombo(2, ZoomX[0], ZoomY[0], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-					if (ZoomX[1] != 0) DrawCombo(2, ZoomX[1], ZoomY[1], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-					if (ZoomX[2] != 0) DrawCombo(2, ZoomX[2], ZoomY[2], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+					if (ZoomX[0] != 0) Screen->DrawCombo(2, ZoomX[0], ZoomY[0], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+					if (ZoomX[1] != 0) Screen->DrawCombo(2, ZoomX[1], ZoomY[1], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+					if (ZoomX[2] != 0) Screen->DrawCombo(2, ZoomX[2], ZoomY[2], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
 					else ghost->CollDetection = true;
-					if (ZoomX[3] != 0) DrawCombo(2, ZoomX[3], ZoomY[3], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
-					if (ZoomX[4] != 0) DrawCombo(2, ZoomX[4], ZoomY[4], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+					if (ZoomX[3] != 0) Screen->DrawCombo(2, ZoomX[3], ZoomY[3], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
+					if (ZoomX[4] != 0) Screen->DrawCombo(2, ZoomX[4], ZoomY[4], this->Data, 2, 2, 7, 32, 32, 0, 0, 0, -1, 0, true, 64);
 					DarkWait(this, ghost);
 				}while (ZoomX[4] != 0)
 				Ghost_Dir = Chosen;
@@ -320,7 +330,7 @@ ffc script Aghanim{
 				Args[1] = 1;
 				int lightning[] = "Lightning";
 				int script_num = Game->GetFFCScript(lightning); //Lightning is a script.
-				ffc meh = Screen->LoadFFC(RunFFCScript(script_num, Args)); //Load the lightning script.
+				ffc meh = Screen->LoadFFC(RunFFCScript(34, Args)); //Load the lightning script.
 				meh->X = Ghost_X + 16;
 				meh->Y = Ghost_Y + 16;
 				while(meh->InitD[2] < 1) DarkWait(this, ghost);
@@ -341,7 +351,7 @@ ffc script Aghanim{
 				Args[0] = 4;
 				int lightning[] = "ShockLink";
 				int script_num = Game->GetFFCScript(lightning);
-				if (CountFFCsRunning(script_num) <= 0) Screen->LoadFFC(RunFFCScript(script_num, Args));
+				if (CountFFCsRunning(script_num) <= 0) Screen->LoadFFC(RunFFCScript(37, Args));//37
 			}
 		}
 		if (!Ghost_Waitframe(this, ghost, false, false)) //Defeat animation/string.
@@ -403,7 +413,7 @@ ffc script WizardBall
 					lweapon Sparkled = Screen->CreateLWeapon(LW_SPARKLE);
 					Sparkled->X = Ball->X - Ball->DrawXOffset;
 					Sparkled->Y = Ball->Y - Ball->DrawYOffset;
-					Sparkled->UseSprite(106);
+					Sparkled->UseSprite(105);
 				}
 				//ShiftArray(PhantomX);
 				//ShiftArray(PhantomY);
@@ -499,7 +509,7 @@ ffc script WizardBall
 					lweapon Sparkled = Screen->CreateLWeapon(LW_SPARKLE);
 					Sparkled->X = Ball2->X - Ball2->DrawXOffset;
 					Sparkled->Y = Ball2->Y - Ball2->DrawYOffset;
-					Sparkled->UseSprite(106);
+					Sparkled->UseSprite(105);
 				}
 				//ShiftArray(PhantomX);
 				//ShiftArray(PhantomY);
@@ -570,3 +580,4 @@ ffc script ShockLink
         this->Misc[BARI_IDX_SHOCKING]=0;
     }
 }
+
