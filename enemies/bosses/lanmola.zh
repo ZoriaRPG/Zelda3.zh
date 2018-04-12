@@ -1,245 +1,629 @@
-//moosh
+const int NPC_HITBOX = 85;
 
-const int CMB_LANMOLA_EMERGE = 12724; //The first of three combos used for the dirt patch where the enemy emerges (small, medium, large)
-const int CS_LANMOLA_EMERGE = 3; //The CSet used for the dirt patch
-const int LANMOLA_MIN_RANGE = 2; //The minimum distance the lanmola will look to submerge from the point it emerges.
-const int LANMOLA_MAX_RANGE = 5; //The maximum distance the lanmola will look to submerge from the point it emerges.
+const int LTTPBOSS_SPECIAL_FLASH = 1;
+const int LTTPBOSS_SPECIAL_DEATH = 1;
 
-//Attributes:
-//A1: The ID of the NPC used for the tail
-//A2: The number of segments
-//A3: Pixels trimmed off the head's hitbox
-//A4: Pixels trimmed off the largest tail segment's hitbox
-//A5: Pixels trimmed off the medium tail segment's hitbox
-//A6: Pixels trimmed off the smallest tail segment's hitbox
-//A7: Sprite of the 8-way projectiles the enemy shoots when emerging (0 for no projectiles)
+const int SPR_LTTPBOSSEXPLOSION = 88;
 
-//Unlike most autoghosted enemies, this uses the enemy's tiles for graphics instead of combos. Attribute 11 should be an invisible combo.
-//Head tiles: Invisible, up, down, left, right, left-up, right-up, left-down, right-down
-//Tail tiles: Biggest, medium, smallest
+const int SPR_LANMOLA_ROCK = 89;
 
-ffc script Lanmola{
-	int FramestoFall(int Z, int Jump, int Gravity){
-		int Frames = 0;
-		while(Z>0||Jump>0){
-			Jump -= Gravity;
-			Z -= Jump;
-			Frames++;
-		}
-		return Frames;
+const int SFX_LANMOLA_RUMBLE = 61;
+const int SFX_LANMOLA_EMERGE = 62;
+
+void __Ghost_DrawShadow(int x, int y, bool oneByOne)
+{
+    // if(GH_SHADOW_FLICKER!=0 && (__ghzhData[__GHI_GLOBAL_FLAGS]&__GHGF_FLICKER)!=0)
+        // return;
+    
+    int tile;
+    int size;
+    
+    // 1x1 shadow
+    if(oneByOne)
+    {
+		size = 1;
+        if(Ghost_FlagIsSet(GHF_STATIC_SHADOW))
+            tile=GH_SHADOW_TILE;
+        else
+            tile=GH_SHADOW_TILE+__ghzhData[__GHI_SHADOW_FRAME];
+    }
+    // 2x2 shadow
+    else
+    {
+        size=2;
+        if(Ghost_FlagIsSet(GHF_STATIC_SHADOW))
+            tile=GH_LARGE_SHADOW_TILE;
+        else
+            tile=GH_LARGE_SHADOW_TILE+2*__ghzhData[__GHI_LARGE_SHADOW_FRAME];
+    }
+    
+    if(GH_SHADOW_TRANSLUCENT>0)
+    {
+        Screen->DrawTile(1, x, y, tile, size, size, GH_SHADOW_CSET,
+                         -1, -1, 0, 0, 0, 0, true, OP_TRANS);
+    }
+    else
+    {
+        Screen->DrawTile(1, x, y, tile, size, size, GH_SHADOW_CSET,
+                         -1, -1, 0, 0, 0, 0, true, OP_OPAQUE);
+    }
+}
+
+lweapon __LttPBoss_Explosion(int x, int y){
+	lweapon explosion;
+	if(LTTPBOSS_SPECIAL_DEATH){
+		Game->PlaySound(SFX_BOMB);
+		explosion=Screen->CreateLWeapon(LW_SPARKLE);
+		explosion->X=x-8;
+		explosion->Y=y-8;
+		explosion->Extend = 3;
+		explosion->TileWidth = 2;
+		explosion->TileHeight = 2;
+		explosion->UseSprite(SPR_LTTPBOSSEXPLOSION);
 	}
-	bool AboveGround(npc Segment){
-		for(int i=0; i<9; i++){
-			if(Segment[i]->isValid()){
-				if(Segment[i]->X>-16)
-					return true;
+	else{
+		explosion=Screen->CreateLWeapon(LW_BOMBBLAST);
+		explosion->X=x;
+		explosion->Y=y;
+	}
+	explosion->CollDetection = false;
+	return explosion;
+}
+
+void __LttPBoss_Explode(ffc this, npc ghost, bool flash)
+{
+    lweapon explosion;
+    int baseX=Ghost_X+ghost->DrawXOffset;
+    int baseY=(Ghost_Y+ghost->DrawYOffset)-(Ghost_Z+ghost->DrawZOffset);
+    
+    __DeathAnimStart(this, ghost);
+    __DeathAnimSFX(ghost->ID, ghost->X);
+    
+    if(flash)
+        __Ghost_FlashCounter=10000;
+    else
+        __Ghost_FlashCounter=0;
+    
+    // One explosion every 16 frames, 15 times
+    for(int i=0; i<15; i++)
+    {
+		__LttPBoss_Explosion(Ghost_X+ghost->DrawXOffset+Rand(16*Ghost_TileWidth)-8, (Ghost_Y+ghost->DrawYOffset)-(Ghost_Z+ghost->DrawZOffset)+Rand(16*Ghost_TileHeight)-8);
+        
+        for(int j=0; j<16; j++)
+        {
+            Ghost_SetPosition(this, ghost); // Make sure it doesn't wander off
+            if(flash)
+                __Ghost_UpdateFlashing(this, ghost);
+            Ghost_WaitframeLight(this, ghost);
+        }
+    }
+    
+    __DeathAnimEnd(this, ghost);
+}
+
+ffc script LttPLanmola{
+	void run(int enemyid){
+		int i; int j; int k;
+		npc ghost = Ghost_InitAutoGhost(this, enemyid);
+		
+		Ghost_SetFlag(GHF_NO_FALL);
+		Ghost_SetFlag(GHF_FAKE_Z);
+		
+		int numSegments = Ghost_GetAttribute(ghost, 0, 8);
+		int spacing = Ghost_GetAttribute(ghost, 1, 12); 
+		int tailStates = Ghost_GetAttribute(ghost, 2, 0);
+		int hitboxShaveStart = Ghost_GetAttribute(ghost, 3, 0);
+		int hitboxShaveEnd = Ghost_GetAttribute(ghost, 4, 0);
+		int spawnComboType = Ghost_GetAttribute(ghost, 5, 0);
+		int canHitAll = Ghost_GetAttribute(ghost, 6, 0);
+		int bossExplode = Ghost_GetAttribute(ghost, 7, 0);
+		
+		int combo = Ghost_GetAttribute(ghost, 10, 0);
+		int spCombo = combo + 16 + 8*tailStates;
+		
+		npc lanmola[32];
+		int trailX[512];
+		int trailY[512];
+		int trailZ[512];
+		int trailDir[512];
+		for(i=0; i<SizeOfArray(trailZ); i++){
+			trailX[i] = 128;
+			trailY[i] = 192;
+			trailZ[i] = -1;
+		}
+		
+		int storedDefenses[18];
+		Ghost_StoreDefenses(ghost, storedDefenses);
+		
+		lanmola[0] = ghost;
+		Ghost_SetHitOffsets(ghost, hitboxShaveStart, hitboxShaveStart, hitboxShaveStart, hitboxShaveStart);
+		for(i=1; i<numSegments; i++){
+			lanmola[i] = CreateNPCAt(NPC_HITBOX, Ghost_X, 192);
+			lanmola[i]->Damage = ghost->Damage;
+			lanmola[i]->HP = 1000;
+			if(canHitAll)
+				Ghost_SetDefenses(lanmola[i], storedDefenses);
+			else
+				Ghost_SetAllDefenses(lanmola[i], NPCDT_IGNORE);
+			int shave = hitboxShaveStart;
+			if(i>=numSegments-tailStates)
+				shave = hitboxShaveStart+(hitboxShaveEnd-hitboxShaveStart)*((i-(numSegments-tailStates)+1)/tailStates);
+			Ghost_SetHitOffsets(lanmola[i], shave, shave, shave, shave);
+		}
+		for(i=0; i<SizeOfArray(trailZ); i++){
+			trailZ[i] = -1;
+		}
+		
+		int vars[16] = {trailX, trailY, trailZ, 0, -1, -1, 0, 0, trailDir, 0};
+		
+		int startPos; int endPos;
+		for(i=Choose(40, 60, 80); i>0; i--){
+			LttPLanmola_Waitframe(this, ghost, lanmola, vars);
+		}
+			
+		while(true){
+			startPos = LttPLanmola_FindStartPoint(spawnComboType);
+			endPos = LttPLanmola_FindEndPoint(startPos, 8, 48, spawnComboType);
+			vars[4] = startPos;
+			vars[5] = endPos;
+			if(bossExplode)
+				Game->PlaySound(SFX_LANMOLA_RUMBLE);
+			for(i=0; i<40; i++){
+				Screen->FastCombo(2, ComboX(startPos), ComboY(startPos), spCombo, Ghost_CSet, 128);
+				LttPLanmola_Waitframe(this, ghost, lanmola, vars);
+			}
+			for(i=0; i<40; i++){
+				Screen->FastCombo(2, ComboX(startPos), ComboY(startPos), spCombo+1, Ghost_CSet, 128);
+				LttPLanmola_Waitframe(this, ghost, lanmola, vars);
+			}
+			for(i=0; i<40; i++){
+				Screen->FastCombo(2, ComboX(startPos), ComboY(startPos), spCombo+2, Ghost_CSet, 128);
+				LttPLanmola_Waitframe(this, ghost, lanmola, vars);
+			}
+			vars[6] = 13;
+			int arcDist = Distance(ComboX(startPos), ComboY(startPos), ComboX(endPos), ComboY(endPos));
+			int arcAngle = Angle(ComboX(startPos), ComboY(startPos), ComboX(endPos), ComboY(endPos));
+			if(bossExplode){
+				Game->PlaySound(SFX_LANMOLA_EMERGE);
+				if(NumNPCsOf(ghost->ID)==1){
+					for(i=0; i<8; i++){
+						eweapon e = FireEWeapon(EW_ROCK, ComboX(startPos), ComboY(startPos), DegtoRad(45*i), 250, ghost->WeaponDamage, SPR_LANMOLA_ROCK, 0, EWF_UNBLOCKABLE);
+						e->OriginalTile += Rand(2);
+						e->Tile = e->OriginalTile;
+						e->HitXOffset = 4;
+						e->HitYOffset = 4;
+						e->HitWidth = 8;
+						e->HitHeight = 8;
+					}
+				}
+				else{
+					for(i=0; i<4; i++){
+						eweapon e = FireEWeapon(EW_ROCK, ComboX(startPos), ComboY(startPos), DegtoRad(45+90*i), 250, ghost->WeaponDamage, SPR_LANMOLA_ROCK, 0, EWF_UNBLOCKABLE);
+						e->OriginalTile += Rand(2);
+						e->Tile = e->OriginalTile;
+						e->HitXOffset = 4;
+						e->HitYOffset = 4;
+						e->HitWidth = 8;
+						e->HitHeight = 8;
+					}
+				}
+			}
+			for(i=0; i<numSegments; i++){
+				lanmola[i]->Dir = AngleDir8(arcAngle);
+			}
+			for(i=0; i<SizeOfArray(trailZ); i++){
+				trailX[i] = ComboX(startPos);
+				trailY[i] = ComboY(startPos);
+				trailZ[i] = -1;
+			}
+			int maxArcTime = arcDist/(ghost->Step/100);
+			int freq = arcDist*10+Rand(90);
+			for(i=0; i<maxArcTime; i++){
+				trailX[0] = ComboX(startPos)+VectorX(ghost->Step/100*i, arcAngle);
+				trailY[0] = ComboY(startPos)+VectorY(ghost->Step/100*i, arcAngle);
+				trailZ[0] = 24*(-Pow(2*(i/maxArcTime)-1, 2)+1)*(1+0.3*Sin(freq*(i/maxArcTime)));
+				int nextX = ComboX(startPos)+VectorX(ghost->Step/100*(i+1), arcAngle);
+				int nextY = ComboY(startPos)+VectorY(ghost->Step/100*(i+1), arcAngle);
+				int nextZ = 24*(-Pow(2*((i+1)/maxArcTime)-1, 2)+1)*(1+0.3*Sin(freq*((i+1)/maxArcTime)));
+				ghost->Dir = AngleDir8(Angle(trailX[0], trailY[0]-trailZ[0], nextX, nextY-nextZ));
+				trailDir[0] = ghost->Dir;
+				LttPLanmola_Waitframe(this, ghost, lanmola, vars);
+			}
+			trailX[0] = ComboX(endPos);
+			trailY[0] = ComboY(endPos);
+			trailZ[0] = -1;
+			vars[7] = 13;
+			while(vars[3]>0){
+				trailZ[0] -= ghost->Step/100;
+				LttPLanmola_Waitframe(this, ghost, lanmola, vars);
+			}
+			for(i=Choose(40, 60, 80); i>0; i--){
+				LttPLanmola_Waitframe(this, ghost, lanmola, vars);
 			}
 		}
-		return false;
 	}
-	void Lanmola_Waitframe(ffc this, npc ghost, npc Segment, int SegmentX, int SegmentY, int SegmentZ){
-		SegmentX[0] = Ghost_X;
-		SegmentY[0] = Ghost_Y-Ghost_Z;
-		SegmentZ[0] = Ghost_Z;
-		int SegmentDist = Round(8/(ghost->Step/100));
-		for(int i=159; i>0; i--){
-			SegmentX[i] = SegmentX[i-1];
-			SegmentY[i] = SegmentY[i-1];
-			SegmentZ[i] = SegmentZ[i-1];
+	int LttPLanmola_FindStartPoint(int ct){
+		int i; int pos; int x; int y;
+		for(i=0; i<176; i++){
+			pos = Rand(176);
+			if(Screen->ComboT[pos]==ct){
+				x = ComboX(pos)+4;
+				y = ComboY(pos)+4;
+				if(!Screen->isSolid(x, y) &&
+					!Screen->isSolid(x+8, y) &&
+					!Screen->isSolid(x, y+8) &&
+					!Screen->isSolid(x+8, y+8)){
+					return pos;
+				}
+			}
 		}
-		for(int i=0; i<9; i++){
-			if(Segment[i]->isValid()){
-				Segment[i]->X = SegmentX[SegmentDist+i*SegmentDist];
-				Segment[i]->Y = SegmentY[SegmentDist+i*SegmentDist];
-				Segment[i]->CSet = this->CSet;
+		for(i=0; i<176; i++){
+			pos = i;
+			if(Screen->ComboT[pos]==ct){
+				x = ComboX(pos)+4;
+				y = ComboY(pos)+4;
+				if(!Screen->isSolid(x, y) &&
+					!Screen->isSolid(x+8, y) &&
+					!Screen->isSolid(x, y+8) &&
+					!Screen->isSolid(x+8, y+8)){
+					return pos;
+				}
+			}
+		}
+		return -1;
+	}
+	int LttPLanmola_FindEndPoint(int startPos, int dist, int minDist, int ct){
+		int i; int j; int pos; int x; int y;
+		for(i=0; i<dist*2*dist*2; i++){
+			x = Clamp((startPos%16)+Rand(-dist, dist), 0, 15);
+			y = Clamp(Floor(startPos/16)+Rand(-dist, dist), 0, 10);
+			pos = x+y*16;
+			if(Screen->ComboT[pos]==ct){
+				if(Distance(ComboX(startPos), ComboY(startPos), ComboX(pos), ComboY(pos))>minDist){
+					x = ComboX(pos)+4;
+					y = ComboY(pos)+4;
+					if(!Screen->isSolid(x, y) &&
+						!Screen->isSolid(x+8, y) &&
+						!Screen->isSolid(x, y+8) &&
+						!Screen->isSolid(x+8, y+8)){
+						return pos;
+					}
+				}
+			}
+		}
+		for(i=-dist; i<=dist; i++){
+			for(j=-dist; j<=dist; j++){
+				x = Clamp((startPos%16)+i, 0, 15);
+				y = Clamp(Floor(startPos/16)+j, 0, 10);
+				pos = x+y*16;
+				if(Screen->ComboT[pos]==ct){
+					if(Distance(ComboX(startPos), ComboY(startPos), ComboX(pos), ComboY(pos))>minDist){
+						x = ComboX(pos)+4;
+						y = ComboY(pos)+4;
+						if(!Screen->isSolid(x, y) &&
+							!Screen->isSolid(x+8, y) &&
+							!Screen->isSolid(x, y+8) &&
+							!Screen->isSolid(x+8, y+8)){
+							return pos;
+						}
+					}
+				}
+			}
+		}
+		return -1;
+	}
+	void LttPLanmola_UpdatePositions(ffc this, npc ghost, npc lanmola, int vars){
+		int i; int j; int k; int x; int y; int z;
+		
+		int trailX = vars[0];
+		int trailY = vars[1];
+		int trailZ = vars[2];
+		int trailDir = vars[8];
+		
+		int max = SizeOfArray(trailX);
+		float distNext = LttPLanmola_Dist3D(trailX[0], trailY[0], trailZ[0], trailX[1], trailY[1], trailZ[1]);
+		int newPoints = Ceiling(distNext);
+		float angNextA = LttPLanmola_AngleYaw(trailX[0], trailY[0], trailZ[0], trailX[1], trailY[1], trailZ[1]);
+		float angNextB = LttPLanmola_AnglePitch(trailX[0], trailY[0], trailZ[0], trailX[1], trailY[1], trailZ[1]);
+		if(distNext>=1){
+			for(i=max-1; i>=newPoints; i--){
+				trailX[i] = trailX[i-newPoints];
+				trailY[i] = trailY[i-newPoints];
+				trailZ[i] = trailZ[i-newPoints];
+				trailDir[i] = trailDir[i-newPoints];
+			}
+			x = trailX[0];
+			y = trailY[0];
+			z = trailZ[0];
+			for(i=0; i<newPoints; i++){
+				k = distNext/newPoints*i;
+				trailX[i] = x+LttPLanmola_VectorX3D(k, angNextA, angNextB);
+				trailY[i] = y+LttPLanmola_VectorY3D(k, angNextA, angNextB);
+				trailZ[i] = z+LttPLanmola_VectorZ3D(k, angNextA, angNextB);
+				trailDir[i] = trailDir[0];
+			}
+		}
+	}
+	void LttPLanmola_Draw(ffc this, npc ghost, npc lanmola, int vars, bool isDeathAnim){
+		int i; int j;
+		int numSegments = Ghost_GetAttribute(ghost, 0, 8);
+		int spacing = Ghost_GetAttribute(ghost, 1, 12); 
+		int tailStates = Ghost_GetAttribute(ghost, 2, 0);
+		int hitboxShaveStart = Ghost_GetAttribute(ghost, 3, 0);
+		int hitboxShaveEnd = Ghost_GetAttribute(ghost, 4, 0);
+		int spawnComboType = Ghost_GetAttribute(ghost, 5, 0);
+		int canHitAll = Ghost_GetAttribute(ghost, 6, 0);
+		int bossExplode = Ghost_GetAttribute(ghost, 7, 0);
+		
+		int combo = Ghost_GetAttribute(ghost, 10, 0);
+		
+		int trailX = vars[0];
+		int trailY = vars[1];
+		int trailZ = vars[2];
+		int trailDir = vars[8];
+		
+		int tempCMB;
+		int spCombo = combo + 16 + 8*tailStates;
+		
+		bool emerging;
+		bool submerging;
+		int damageDealt;
+		
+		vars[3] = 0;
+		int drawZ[32];
+		int drawOrder[32];
+		
+		
+		for(i=0; i<numSegments; i++){
+			drawZ[i] = trailZ[i*spacing];
+			drawOrder[i] = i;
+		}
+		LttPLanmola_SortDraw(drawZ, drawOrder, numSegments);
+		for(j=0; j<numSegments; j++){
+			i = drawOrder[j];
+			if(lanmola[i]->isValid()){
+				if(i>0&&lanmola[i]->HP<1000&&!isDeathAnim){
+					if(1000-lanmola[i]->HP>damageDealt)
+						damageDealt = 1000-lanmola[i]->HP;
+					lanmola[i]->HP = 1000;
+				}
+				if(i==0)
+					tempCMB = combo;
+				else if(i>=numSegments-tailStates)
+					tempCMB = combo + 16 + 8 * (i-(numSegments-tailStates));
+				else
+					tempCMB = combo + 8;
+					
+				if(__Ghost_FlashCounter>0&&LTTPBOSS_SPECIAL_FLASH)
+					tempCMB += 16 + 8 * tailStates + 4;
+				if(trailZ[i*spacing]>=0){
+					vars[3]++;
+					lanmola[i]->X = trailX[i*spacing];
+					lanmola[i]->Y = trailY[i*spacing]-trailZ[i*spacing];
+					lanmola[i]->DrawYOffset = -1000;
+					__Ghost_DrawShadow(trailX[i*spacing], trailY[i*spacing], true);
+					Screen->FastCombo(Cond(isDeathAnim, 2, 4), trailX[i*spacing], trailY[i*spacing]-trailZ[i*spacing]-2, tempCMB+lanmola[i]->Dir, this->CSet, 128);
+				}
+				else{
+					if(Distance(trailX[i*spacing], trailY[i*spacing], ComboX(vars[4]), ComboY(vars[4]))<8){
+						emerging = true;
+					}
+					else if(Distance(trailX[i*spacing], trailY[i*spacing], ComboX(vars[5]), ComboY(vars[5]))<8){
+						submerging = true;
+					}
+					lanmola[i]->Y = 192;
+				}
 				
-				if(SegmentZ[SegmentDist+i*SegmentDist]>0&&!(GH_SHADOW_FLICKER!=0 && (__ghzhData[__GHI_GLOBAL_FLAGS]&__GHGF_FLICKER)!=0)){
-					int x;
-					int y;
-					int tile;
-					x=Segment[i]->X;
-					y=Segment[i]->Y+SegmentZ[SegmentDist+i*SegmentDist];
-					if(Ghost_FlagIsSet(GHF_STATIC_SHADOW))
-						tile=GH_SHADOW_TILE;
-					else
-						tile=GH_SHADOW_TILE+__ghzhData[__GHI_SHADOW_FRAME];
-						
-					if(GH_SHADOW_TRANSLUCENT>0)
-					{
-						Screen->DrawTile(1, x, y, tile, 1, 1, GH_SHADOW_CSET,
-										 -1, -1, 0, 0, 0, 0, true, OP_TRANS);
-					}
-					else
-					{
-						Screen->DrawTile(1, x, y, tile, 1, 1, GH_SHADOW_CSET,
-										 -1, -1, 0, 0, 0, 0, true, OP_OPAQUE);
-					}
+				if(i>0){
+					lanmola[i]->Dir = trailDir[i*spacing];
+				}
+				if(__Ghost_FlashCounter)
+					lanmola[i]->CollDetection = false;
+				else
+					lanmola[i]->CollDetection = true;
+			}
+		}
+		if(!isDeathAnim){
+			if(vars[6]>0&&vars[4]>-1){
+				if(vars[6]>8){
+					Screen->DrawTile(2, ComboX(vars[4])-4, ComboY(vars[4]), Game->ComboTile(spCombo+3), 1, 1, Ghost_CSet, -1, -1, 0, 0, 0, 0, true, 128);
+					Screen->DrawTile(2, ComboX(vars[4])+4, ComboY(vars[4]), Game->ComboTile(spCombo+3), 1, 1, Ghost_CSet, -1, -1, 0, 0, 0, 1, true, 128);
+				}
+				else if(vars[6]>4){
+					Screen->DrawTile(2, ComboX(vars[4])-12, ComboY(vars[4]), Game->ComboTile(spCombo+3)+1, 1, 1, Ghost_CSet, -1, -1, 0, 0, 0, 0, true, 128);
+					Screen->DrawTile(2, ComboX(vars[4])+12, ComboY(vars[4]), Game->ComboTile(spCombo+3)+1, 1, 1, Ghost_CSet, -1, -1, 0, 0, 0, 1, true, 128);
+				}
+				else{
+					Screen->DrawTile(2, ComboX(vars[4])-24, ComboY(vars[4]), Game->ComboTile(spCombo+3)+2, 1, 1, Ghost_CSet, -1, -1, 0, 0, 0, 0, true, 128);
+					Screen->DrawTile(2, ComboX(vars[4])+24, ComboY(vars[4]), Game->ComboTile(spCombo+3)+2, 1, 1, Ghost_CSet, -1, -1, 0, 0, 0, 1, true, 128);
+				}
+					
+				vars[6]--;
+				if(vars[6]==0&&emerging&&vars[3]>0)
+					vars[6] = 13;
+			}
+			if(vars[7]>0&&vars[5]>-1){
+				if(vars[7]>8){
+					Screen->DrawTile(2, ComboX(vars[5])-4, ComboY(vars[5]), Game->ComboTile(spCombo+3), 1, 1, Ghost_CSet, -1, -1, 0, 0, 0, 0, true, 128);
+					Screen->DrawTile(2, ComboX(vars[5])+4, ComboY(vars[5]), Game->ComboTile(spCombo+3), 1, 1, Ghost_CSet, -1, -1, 0, 0, 0, 1, true, 128);
+				}
+				else if(vars[7]>4){
+					Screen->DrawTile(2, ComboX(vars[5])-12, ComboY(vars[5]), Game->ComboTile(spCombo+3)+1, 1, 1, Ghost_CSet, -1, -1, 0, 0, 0, 0, true, 128);
+					Screen->DrawTile(2, ComboX(vars[5])+12, ComboY(vars[5]), Game->ComboTile(spCombo+3)+1, 1, 1, Ghost_CSet, -1, -1, 0, 0, 0, 1, true, 128);
+				}
+				else{
+					Screen->DrawTile(2, ComboX(vars[5])-24, ComboY(vars[5]), Game->ComboTile(spCombo+3)+2, 1, 1, Ghost_CSet, -1, -1, 0, 0, 0, 0, true, 128);
+					Screen->DrawTile(2, ComboX(vars[5])+24, ComboY(vars[5]), Game->ComboTile(spCombo+3)+2, 1, 1, Ghost_CSet, -1, -1, 0, 0, 0, 1, true, 128);
+				}
+				
+				vars[7]--;
+				if(vars[7]==0&&submerging&&vars[3]>0)
+					vars[7] = 13;
+			}
+		}
+		
+		if(damageDealt>0&&__Ghost_FlashCounter==0){
+			Ghost_HP -= damageDealt;
+			if(Ghost_HP<=0){
+				vars[9] = 1;
+				Ghost_HP = 1;
+			}
+			Ghost_StartFlashing();
+		}
+		Ghost_X = trailX[0];
+		Ghost_Y = trailY[0]-trailZ[0];
+	}
+	void LttPLanmola_SortDraw(int z, int order, int max){
+		bool doOver = true;
+		while(doOver){
+			doOver = false;
+			for(int i=1; i<max; i++){
+				if(z[i]<z[i-1]){
+					int saveZ = z[i];
+					int saveOrder = order[i];
+					z[i] = z[i-1];
+					order[i] = order[i-1];
+					z[i-1] = saveZ;
+					order[i-1] = saveOrder;
+					doOver = true;
 				}
 			}
 		}
-		if(!Ghost_Waitframe(this, ghost, false, false)){
-			for(int i=0; i<9; i++){
-				if(Segment[i]->isValid()){
-					if(ghost->HP<1)
-						Segment[i]->HP = 0;
+	}
+	void LttPLanmola_Waitframe(ffc this, npc ghost, npc lanmola, int vars){
+		int numSegments = Ghost_GetAttribute(ghost, 0, 8);
+		int spacing = Ghost_GetAttribute(ghost, 1, 12); 
+		int tailStates = Ghost_GetAttribute(ghost, 2, 0);
+		int hitboxShaveStart = Ghost_GetAttribute(ghost, 3, 0);
+		int hitboxShaveEnd = Ghost_GetAttribute(ghost, 4, 0);
+		int spawnComboType = Ghost_GetAttribute(ghost, 5, 0);
+		int canHitAll = Ghost_GetAttribute(ghost, 6, 0);
+		int bossExplode = Ghost_GetAttribute(ghost, 7, 0);
+		
+		int combo = Ghost_GetAttribute(ghost, 10, 0);
+		
+		int trailX = vars[0];
+		int trailY = vars[1];
+		int trailZ = vars[2];
+		
+		LttPLanmola_UpdatePositions(this, ghost, lanmola, vars);
+		LttPLanmola_Draw(this, ghost, lanmola, vars, false);
+		if(vars[9]==1||!Ghost_Waitframe2(this, ghost, true, false)){
+			if(bossExplode)
+				LttPLanmola_ExplodeLttP(this, ghost, lanmola, vars, true);
+			else{
+				for(int i=0; i<numSegments; i++){
+					if(lanmola[i]->isValid()){
+						if(i>0)
+							lanmola[i]->HP = -1000;
+						else
+							lanmola[i]->HP = 0;
+						if(trailZ[i*spacing]>=0)
+							lanmola[i]->DrawYOffset = -2;
+					}
 				}
+				Quit();
 			}
-			this->Data=0;
-			Ghost_Data=0;
 			Quit();
 		}
 	}
-	void run(int enemyid){
-		npc ghost = Ghost_InitAutoGhost(this, enemyid);
+	void LttPLanmola_ExplodeLttP(ffc this, npc ghost, npc lanmola, int vars, bool flash)
+	{
+		int numSegments = Ghost_GetAttribute(ghost, 0, 8);
+		int spacing = Ghost_GetAttribute(ghost, 1, 12); 
+		int tailStates = Ghost_GetAttribute(ghost, 2, 0);
+		int hitboxShaveStart = Ghost_GetAttribute(ghost, 3, 0);
+		int hitboxShaveEnd = Ghost_GetAttribute(ghost, 4, 0);
+		int spawnComboType = Ghost_GetAttribute(ghost, 5, 0);
+		int canHitAll = Ghost_GetAttribute(ghost, 6, 0);
+		int bossExplode = Ghost_GetAttribute(ghost, 7, 0);
 		
-		Ghost_SetFlag(GHF_IGNORE_ALL_TERRAIN);
-		Ghost_SetFlag(GHF_IGNORE_NO_ENEMY);
-		Ghost_SetFlag(GHF_FAKE_Z);
-		Ghost_SetFlag(GHF_NO_FALL);
+		int combo = Ghost_GetAttribute(ghost, 10, 0);
 		
-		int SegmentID = ghost->Attributes[0];
-		int NumSegments = Max(4, ghost->Attributes[1]);
-		int HeadTrim = ghost->Attributes[2];
-		int Segment1Trim = ghost->Attributes[3];
-		int Segment2Trim = ghost->Attributes[4];
-		int Segment3Trim = ghost->Attributes[5];
-		int RockSprite = ghost->Attributes[6];
+		lweapon explosion;
+		int baseX=Ghost_X+ghost->DrawXOffset;
+		int baseY=(Ghost_Y+ghost->DrawYOffset)-(Ghost_Z+ghost->DrawZOffset);
 		
-		npc Segment[9];
-		int SegmentX[160];
-		int SegmentY[160];
-		int SegmentZ[160];
-		for(int i=0; i<160; i++){
-			SegmentX[i] = -16;
-			SegmentY[i] = -16;
-			SegmentZ[i] = 0;
-		}
-		Ghost_X = -16;
-		Ghost_Y = -16;
-		ghost->X = -16;
-		ghost->Y = -16;
-		Ghost_SetHitOffsets(ghost, HeadTrim, HeadTrim, HeadTrim, HeadTrim);
-		int OriginalTile = ghost->Tile;
-		for(int i=0; i<NumSegments; i++){
-			Segment[i] = CreateNPCAt(SegmentID, Ghost_X, Ghost_Y);
-			if(i==NumSegments-1){
-				Segment[i]->OriginalTile += 2;
-				Segment[i]->Tile += 2;
-				Ghost_SetHitOffsets(Segment[i], Segment3Trim, Segment3Trim, Segment3Trim, Segment3Trim);
-			}
-			else if(i==NumSegments-2){
-				Segment[i]->OriginalTile += 1;
-				Segment[i]->Tile += 1;
-				Ghost_SetHitOffsets(Segment[i], Segment2Trim, Segment2Trim, Segment2Trim, Segment2Trim);
-			}
-			else{
-				Ghost_SetHitOffsets(Segment[i], Segment1Trim, Segment1Trim, Segment1Trim, Segment1Trim);
-			}
-			Ghost_SetAllDefenses(Segment[i], NPCDT_IGNORE);
-		}
-		while(true){
-			for(int i=0; i<90; i++){
-				Lanmola_Waitframe(this, ghost, Segment, SegmentX, SegmentY, SegmentZ);
-			}
-			int StartCombo = FindSpawnPoint(true, false, false, false);
-			int MinX = ComboX(StartCombo)/16-LANMOLA_MAX_RANGE;
-			int MaxX = ComboX(StartCombo)/16+LANMOLA_MAX_RANGE;
-			int MinY = ComboY(StartCombo)/16-LANMOLA_MAX_RANGE;
-			int MaxY = ComboY(StartCombo)/16+LANMOLA_MAX_RANGE;
-			int EndCombo;
-			for(int i=0; i<120; i++){
-				int X = Rand(MinX, MaxX)*16;
-				int Y = Rand(MinY, MaxY)*16;
-				EndCombo = ComboAt(X+8, Y+8);
-				if(Screen->ComboT[EndCombo]==CT_NONE&&Screen->ComboS[EndCombo]==0000b&&EndCombo!=StartCombo&&Abs(X-ComboX(StartCombo))/16>=LANMOLA_MIN_RANGE&&Abs(Y-ComboY(StartCombo))/16>=LANMOLA_MIN_RANGE)
-					break;
-				else EndCombo = -1;
-			}
-			while(EndCombo<0){
-				int Combo = Rand(0, 175);
-				if(Screen->ComboT[Combo]==CT_NONE&&Screen->ComboS[Combo]==0000b&&Combo!=StartCombo)
-					EndCombo = Combo;
-			}
-			for(int i=0; i<8/(ghost->Step/100); i++){
-				Screen->FastCombo(2, ComboX(StartCombo), ComboY(StartCombo), CMB_LANMOLA_EMERGE, CS_LANMOLA_EMERGE, 128);
-				Lanmola_Waitframe(this, ghost, Segment, SegmentX, SegmentY, SegmentZ);
-			}
-			for(int i=0; i<8/(ghost->Step/100); i++){
-				Screen->FastCombo(2, ComboX(StartCombo), ComboY(StartCombo), CMB_LANMOLA_EMERGE+1, CS_LANMOLA_EMERGE, 128);
-				Lanmola_Waitframe(this, ghost, Segment, SegmentX, SegmentY, SegmentZ);
-			}
-			for(int i=0; i<8/(ghost->Step/100); i++){
-				Screen->FastCombo(2, ComboX(StartCombo), ComboY(StartCombo), CMB_LANMOLA_EMERGE+2, CS_LANMOLA_EMERGE, 128);
-				Lanmola_Waitframe(this, ghost, Segment, SegmentX, SegmentY, SegmentZ);
-			}
-			if(RockSprite>0){
-				for(int i=0; i<8; i++){
-					eweapon e = FireEWeapon(EW_SCRIPT10, ComboX(StartCombo), ComboY(StartCombo), DegtoRad(45*i), 250, ghost->WeaponDamage, RockSprite, SFX_ROCK, EWF_UNBLOCKABLE);
-					e->HitWidth = 8;
-					e->HitHeight = 8;
-					e->HitXOffset = 4;
-					e->HitYOffset = 4;
+		Ghost_HP = 1;
+		__DeathAnimStart(this, ghost);
+		__DeathAnimSFX(ghost->ID, ghost->X);
+		
+		if(flash)
+			__Ghost_FlashCounter=10000;
+		else
+			__Ghost_FlashCounter=0;
+		
+		int trailX = vars[0];
+		int trailY = vars[1];
+		int trailZ = vars[2];
+		
+		int x1; int y1; int x2; int y2;
+		for(int i=numSegments-1; i>=0; i--){
+			if(trailZ[i*spacing]>=0&&lanmola[i]->isValid()){
+				if(i<numSegments-1){
+					x1 = trailX[i*spacing];
+					y1 = trailY[i*spacing]-trailZ[i*spacing];
+					x2 = trailX[(i+1)*spacing];
+					y2 = trailY[(i+1)*spacing]-trailZ[(i+1)*spacing];
+					__LttPBoss_Explosion((x1+x2)/2, (y1+y2)/2);
 				}
-			}
-			Ghost_X = ComboX(StartCombo);
-			Ghost_Y = ComboY(StartCombo);
-			int SegmentDist = Round(8/(ghost->Step/100));
-			int FloatDistance = Distance(Ghost_X, Ghost_Y, ComboX(EndCombo), ComboY(EndCombo));
-			int FloatAngle = Angle(Ghost_X, Ghost_Y, ComboX(EndCombo), ComboY(EndCombo));
-			int FloatFrames = FloatDistance/(ghost->Step/100);
-			ghost->OriginalTile = OriginalTile+AngleDir8(FloatAngle)+1;
-			ghost->Tile = OriginalTile+AngleDir8(FloatAngle)+1;
-			bool DrawStartPoint = true;
-			for(int i=0; i<FloatFrames; i++){
-				if(SegmentX[SegmentDist*(NumSegments-2)]==-16)
-					Screen->FastCombo(2, ComboX(StartCombo), ComboY(StartCombo), CMB_LANMOLA_EMERGE+2, CS_LANMOLA_EMERGE, 128);
-				else if(SegmentX[SegmentDist*(NumSegments-1)]==-16)
-					Screen->FastCombo(2, ComboX(StartCombo), ComboY(StartCombo), CMB_LANMOLA_EMERGE+1, CS_LANMOLA_EMERGE, 128);
-				else if(SegmentX[SegmentDist*(NumSegments)]==-16)
-					Screen->FastCombo(2, ComboX(StartCombo), ComboY(StartCombo), CMB_LANMOLA_EMERGE, CS_LANMOLA_EMERGE, 128);
-				else if(SegmentX[SegmentDist*(NumSegments)]>-16)
-					DrawStartPoint = false;
-				int HalfA = 180/FloatFrames;
-				int FullA = 360/FloatFrames;
-				int Height = Clamp(FloatDistance/4, 8, 40);
-				if(FloatDistance<48){
-					Ghost_Z = Height*Sin(i*HalfA);
+				for(int j=0; j<16; j++){
+					LttPLanmola_Draw(this, ghost, lanmola, vars, true);
+					if(flash)
+						__Ghost_UpdateFlashing(this, ghost);
+					Ghost_WaitframeLight(this, ghost);
 				}
-				else{
-					Ghost_Z = Height*Sin(i*HalfA)+Floor(Height/6)*Sin(i*FullA*(Floor(FloatDistance/32)+0.5));
+				__LttPBoss_Explosion(trailX[i*spacing], trailY[i*spacing]-trailZ[i*spacing]);
+			}
+			if(lanmola[i]->isValid()){
+				lanmola[i]->HP = -1000;
+			}
+			if(trailZ[i*spacing]>=0&&lanmola[i]->isValid()){
+				for(int j=0; j<16; j++){
+					LttPLanmola_Draw(this, ghost, lanmola, vars, true);
+					if(flash)
+						__Ghost_UpdateFlashing(this, ghost);
+					Ghost_WaitframeLight(this, ghost);
 				}
-				Ghost_X += VectorX(ghost->Step/100, FloatAngle);
-				Ghost_Y += VectorY(ghost->Step/100, FloatAngle);
-				Lanmola_Waitframe(this, ghost, Segment, SegmentX, SegmentY, SegmentZ);
-			}
-			int X = Ghost_X;
-			int Y = Ghost_Y;
-			Ghost_X = -16;
-			Ghost_Y = -16;
-			while(AboveGround(Segment)){
-				if(DrawStartPoint){
-					if(SegmentX[SegmentDist*(NumSegments)]>-16)
-						DrawStartPoint = false;
-					else{
-						if(SegmentX[SegmentDist*(NumSegments-2)]==-16)
-							Screen->FastCombo(2, ComboX(StartCombo), ComboY(StartCombo), CMB_LANMOLA_EMERGE+2, CS_LANMOLA_EMERGE, 128);
-						else if(SegmentX[SegmentDist*(NumSegments-1)]==-16)
-							Screen->FastCombo(2, ComboX(StartCombo), ComboY(StartCombo), CMB_LANMOLA_EMERGE+1, CS_LANMOLA_EMERGE, 128);
-						else if(SegmentX[SegmentDist*(NumSegments)]==-16)
-							Screen->FastCombo(2, ComboX(StartCombo), ComboY(StartCombo), CMB_LANMOLA_EMERGE, CS_LANMOLA_EMERGE, 128);
-					}
-				}
-				Screen->FastCombo(2, X, Y, CMB_LANMOLA_EMERGE+2, CS_LANMOLA_EMERGE, 128);
-				Lanmola_Waitframe(this, ghost, Segment, SegmentX, SegmentY, SegmentZ);
-			}
-			for(int i=0; i<8/(ghost->Step/100); i++){
-				Screen->FastCombo(2, X, Y, CMB_LANMOLA_EMERGE+1, CS_LANMOLA_EMERGE, 128);
-				Lanmola_Waitframe(this, ghost, Segment, SegmentX, SegmentY, SegmentZ);
-			}
-			for(int i=0; i<8/(ghost->Step/100); i++){
-				Screen->FastCombo(2, X, Y, CMB_LANMOLA_EMERGE, CS_LANMOLA_EMERGE, 128);
-				Lanmola_Waitframe(this, ghost, Segment, SegmentX, SegmentY, SegmentZ);
 			}
 		}
+		
+		__DeathAnimEnd(this, ghost);
+	}
+	float LttPLanmola_Dist3D(int x1, int y1, int z1, int x2, int y2, int z2){
+		int dx = x1-x2;
+		int dy = y1-y2;
+		int dz = z1-z2;
+		return Sqrt(Pow(dx, 2)+Pow(dy, 2)+Pow(dz, 2));
+	}
+	float LttPLanmola_AngleYaw(int x1, int y1, int z1, int x2, int y2, int z2){
+		int dX = x1-x2;
+		int dY = y1-y2;
+		int dZ = z1-z2;
+		
+		int yaw = RadtoDeg(ArcTan(dX, dY))+180;
+		
+		return yaw;
+	}
+
+	float LttPLanmola_AnglePitch(int x1, int y1, int z1, int x2, int y2, int z2){
+		int dX = x1-x2;
+		int dY = y1-y2;
+		int dZ = z1-z2;
+		
+		int pitch = RadtoDeg(ArcTan(Distance(x1, y1, x2, y2), dZ));
+		
+		return pitch;
+	}
+	float LttPLanmola_VectorX3D(int distance, int yaw, int pitch){
+		return distance*Sin(pitch)*Cos(yaw);
+	}
+
+	float LttPLanmola_VectorY3D(int distance, int yaw, int pitch){
+		return distance*Sin(pitch)*Sin(yaw);
+	}
+
+	float LttPLanmola_VectorZ3D(int distance, int yaw, int pitch){
+		return distance*Cos(pitch);
 	}
 }
