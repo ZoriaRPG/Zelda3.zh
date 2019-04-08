@@ -1,0 +1,40 @@
+This is Setup.txt for Ganon.qst
+Requires ghost.zh
+
+Scriptfile Ganon.zh
+write down one string when enter the room where Ganon is located
+
+in the example quest it is string 3
+cons int STRING_GANON_ENTER = 3;
+
+and one for when Ganon dies
+in the example quest it is string 4
+cons int STRING_GANON_DIES = 4;
+
+Make some weapons sprites in Graphics/Sprites/Weapons/Misc
+in the script file it is
+cons int SPR_EMPTY = 88;
+cons int SPR_SPARK = 89;
+cons int SPR_FIRE_BAT = 90;
+
+And write the combo for the trident in this line in the script
+
+cons int CMB_TRIDENT = 1870;
+cset for Trident
+cons int CS_TRIDENT = 9;
+
+and cset for ganon frozen
+cons int CS_GANON_FROZEN =4;
+
+and some soundSFX
+cons int SFX_TRIDENT = 70;
+cons int SFX_GANON_GLIDE = 69;
+cons int SFX_FIRE_BAT = 39;
+
+and FFC script slot for the script fireSpiral is included in Ganon.zh
+cons int SCRIPT_FIRE_SPIRAL = 2;
+
+Combos for Ganon starts from COMBO 1864 to 1870
+write down the first combo in Misc Attr.11: in the enemie editor 
+and Misc Attr.12:is for the Ganon script.
+
