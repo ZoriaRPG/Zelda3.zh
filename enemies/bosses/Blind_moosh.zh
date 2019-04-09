@@ -1,0 +1,231 @@
+
+import "ghost.zh"
+import "theRandomHeader.zh"
+
+//Blind Constants
+const int SPR_BLIND_FACEUP = 94; //The 3x3 sprite used for Blind turning to face upwards
+const int SPR_BLIND_FACEDOWN = 95; //The 3x3 sprite used for Blind turning to face down
+const int SPR_BLIND_FALL = 96; //The 3x3 sprite used for Blind's cloth falling to the floor
+const int SPR_BLIND_RISE = 97; //The 3x3 sprite used for Blind rising back up
+const int SCRIPT_LASER = 6; //The slot of the script used for Blind's laser
+const int COLOR_BLIND_LASER = 0x17; //The color used for Blind's laser
+const int SFX_BLIND_LASER = 72; //The sound played when Blind fires his laser
+
+//Blind Enemy Attributes
+//Attribute 1: The ID of the enemy to spawn every time his health hits 0
+//Attribute 2: How many extra health bars/heads Blind has
+//Attribute 3: How long in frames Blind pauses in between shots
+//Attribute 11: The first of three 3x3 combos (Blind facing down, Blind facing up, Blind's cloth lying on the floor)
+//Attribute 12: The slot this script is loaded into
+ffc script Blind{
+	void Blind_Waitframe(ffc this, npc ghost, int BlindVars, int Dir, bool CheckHitbox){
+		if(CheckHitbox&&RectCollision(this->X+10, this->Y+16, this->X+38, this->Y+48, Link->X, Link->Y, Link->X+15, Link->Y+15)){
+			eweapon e = FireAimedEWeapon(EW_SCRIPT10, Link->X+InFrontX(Link->Dir, 12), Link->Y+InFrontY(Link->Dir, 12), 0, 0, ghost->Damage, 0, 0, EWF_UNBLOCKABLE);
+			e->DrawYOffset = -1000;
+			SetEWeaponLifespan(e, EWL_TIMER, 1);
+			SetEWeaponDeathEffect(e, EWD_VANISH, 0);
+		}
+		if(!Ghost_Waitframe(this, ghost, false, false)){
+			if(BlindVars[2]>0){
+				Ghost_HP = BlindVars[3];
+				BlindVars[2]--;
+				npc Head = CreateNPCAt(BlindVars[1], Ghost_X+16, Ghost_Y+10);
+				ghost->CollDetection = false;
+				Ghost_Data = GH_INVISIBLE_COMBO;
+				eweapon Fall = FireBigEWeapon(EW_SCRIPT10, Ghost_X, Ghost_Y, 0, 0, 0, SPR_BLIND_FALL, 0, 0, 3, 3);
+				Fall->DeadState = Fall->NumFrames*Fall->ASpeed;
+				Ghost_Waitframes(this, ghost, true, true, Fall->DeadState);
+				Ghost_Data = BlindVars[0]+2;
+				Ghost_Waitframes(this, ghost, true, true, 300);
+				Ghost_Data = GH_INVISIBLE_COMBO;
+				eweapon Rise = FireBigEWeapon(EW_SCRIPT10, Ghost_X, Ghost_Y, 0, 0, 0, SPR_BLIND_RISE, 0, 0, 3, 3);
+				Rise->DeadState = Rise->NumFrames*Rise->ASpeed;
+				Ghost_Waitframes(this, ghost, true, true, Rise->DeadState);
+				if(Dir==DIR_DOWN)Ghost_Data = BlindVars[0];
+				else{Ghost_Data = BlindVars[0]+1;}
+				ghost->CollDetection = true;
+			}
+			else{
+				for(int i=1; i<=Screen->NumNPCs(); i++){
+					npc n = Screen->LoadNPC(i);
+					if(n!=ghost){
+						n->HP = 0;
+					}
+				}
+				Ghost_Explode(this, ghost);
+				Quit();
+			}
+		}
+	}
+	void Blind_Waitframes(ffc this, npc ghost, int BlindVars, int Dir, bool CheckHitbox, int Frames){
+		for(int i=0; i<Frames; i++){
+			Blind_Waitframe(this, ghost, BlindVars, Dir, CheckHitbox);
+		}
+	}
+	void run(int enemyid){
+		npc ghost = Ghost_InitAutoGhost(this, enemyid);
+		Ghost_SetFlag(GHF_IGNORE_ALL_TERRAIN);
+		int HeadID = ghost->Attributes[0];
+		int ExtraHeads = ghost->Attributes[1];
+		int ShotFreq = ghost->Attributes[2];
+		int Combo = ghost->Attributes[10];
+		Ghost_Transform(this, ghost, Combo, ghost->CSet, 3, 3);
+		Ghost_SetHitOffsets(ghost, 10, 22, 16, 16);
+		int BlindVars[4];
+		BlindVars[0] = Combo;
+		BlindVars[1] = HeadID;
+		BlindVars[2] = ExtraHeads;
+		BlindVars[3] = ghost->HP;
+		int EnemyDefense[18];
+		for(int i=0; i<18; i++){
+			EnemyDefense[i] = ghost->Defense[i];
+		}
+		int Counter = 0;
+		int TargetX;
+		int TargetY;
+		int Random = Rand(3, 6);
+		int Dir = DIR_DOWN;
+		Ghost_X = 104;
+		Ghost_Y = 32;
+		while(true){
+			Counter+=2;
+			if(Counter%(ShotFreq*2)==0&&Counter<360){
+				eweapon e = FireAimedEWeapon(EW_FIREBALL, Ghost_X+16, Ghost_Y+10, 0, 250, ghost->WeaponDamage, -1, -1, 0);
+			}
+			if(Counter>=360){
+				Counter = 0;
+				Random = Rand(3, 5);
+				int Attack = Rand(0, 1);
+				if(Attack==0){
+					if(Dir==DIR_DOWN){
+						while(Ghost_Y<88){
+							Ghost_Y+=2;
+							Blind_Waitframe(this, ghost, BlindVars, Dir, true);
+						}
+						Ghost_Data = GH_INVISIBLE_COMBO;
+						eweapon TurnUp = FireBigEWeapon(EW_SCRIPT10, Ghost_X, Ghost_Y, 0, 0, 0, SPR_BLIND_FACEUP, 0, 0, 3, 3);
+						TurnUp->DeadState = TurnUp->NumFrames*TurnUp->ASpeed;
+						Blind_Waitframes(this, ghost, BlindVars, Dir, true, TurnUp->DeadState);
+						Ghost_Data = Combo+1;
+						Dir = DIR_UP;
+					}
+					else{
+						while(Ghost_Y>32){
+							Ghost_Y-=2;
+							Blind_Waitframe(this, ghost, BlindVars, Dir, true);
+						}
+						Ghost_Data = GH_INVISIBLE_COMBO;
+						eweapon TurnDown = FireBigEWeapon(EW_SCRIPT10, Ghost_X, Ghost_Y, 0, 0, 0, SPR_BLIND_FACEUP, 0, 0, 3, 3);
+						TurnDown->DeadState = TurnDown->NumFrames*TurnDown->ASpeed;
+						Blind_Waitframes(this, ghost, BlindVars, Dir, true, TurnDown->DeadState);
+						Ghost_Data = Combo;
+						Dir = DIR_DOWN;
+					}
+				}
+				else if(Attack==1){
+					Game->PlaySound(SFX_BLIND_LASER);
+					int FFCArg[8];
+					FFCArg[0] = Ghost_X+16;
+					FFCArg[1] = Ghost_Y+10;
+					FFCArg[2] = 80;
+					FFCArg[3] = Angle(Ghost_X+16, Ghost_Y+10, Link->X, Link->Y);
+					FFCArg[4] = 4;
+					FFCArg[5] = ghost->WeaponDamage*2;
+					FFCArg[6] = COLOR_BLIND_LASER;
+					RunFFCScript(SCRIPT_LASER, FFCArg);
+					Blind_Waitframes(this, ghost, BlindVars, Dir, true, 40);
+				}
+			}
+			TargetX = 104+72*Sin(Counter);
+			if(Dir==DIR_DOWN)TargetY = 32+8*Sin(Random*Counter);
+			else{TargetY = 88+8*Sin(Random*Counter);}
+			if(Distance(Ghost_X, Ghost_Y, TargetX, TargetY)>2){
+				Ghost_MoveAtAngle(Angle(Ghost_X, Ghost_Y, TargetX, TargetY), 2, 0);
+			}
+			Blind_Waitframe(this, ghost, BlindVars, Dir, true);
+		}
+	}
+}
+
+//Blind Head Enemy Attributes
+//Attribute 1: How many frames the head pauses in between shots
+//Attribute 11: The 1x1 combo to use for the head spinning
+//Attribute 12: The slot this script is loaded into
+ffc script Blind_Head{
+	void run(int enemyid){
+		npc ghost = Ghost_InitAutoGhost(this, enemyid);
+		Ghost_SetFlag(GHF_IGNORE_ALL_TERRAIN);
+		int ShotFreq = ghost->Attributes[0];
+		int Combo = ghost->Attributes[10];
+		Ghost_Transform(this, ghost, Combo, ghost->CSet, 1, 1);
+		int Counter = 0;
+		int VX;
+		int VY;
+		int XPositions[4] = {40, 40, 200, 200};
+		int YPositions[4] = {40, 120, 40, 120};
+		int Position = Rand(0, 3);
+		int OldPosition = Position;
+		int TargetX = XPositions[Position];
+		int TargetY = YPositions[Position];
+		while(true){
+			Counter++;
+			if(Counter%ShotFreq==0){
+				eweapon e = FireEWeapon(EW_FIREBALL, Ghost_X, Ghost_Y, DegtoRad(Rand(1, 360)), 250, ghost->WeaponDamage, -1, -1, 0);
+			}
+			if(Counter>=90){
+				Counter = 0;
+				Position = Rand(0, 3);
+				if(Position==OldPosition){
+					Position++;
+					if(Position>3)Position = 0;
+				}
+				OldPosition = Position;
+				TargetX = XPositions[Position];
+				TargetY = YPositions[Position];
+			}
+			if(Ghost_X<TargetX)VX = Min(2, VX+0.1);
+			else if(Ghost_X>TargetX)VX = Max(-2, VX-0.1);
+			if(Ghost_Y<TargetY)VY = Min(2, VY+0.1);
+			else if(Ghost_Y>TargetY)VY = Max(-2, VY-0.1);
+			Ghost_X+=VX;
+			Ghost_Y+=VY;
+			Ghost_Waitframe(this, ghost, true, true);
+		}
+	}
+}
+
+//This is the script used for Blind's laser which requires theRandomHeader.zh
+ffc script Laser{
+	void run(int InitX, int InitY, int Length, int Angle, int Step, int Damage, int Color){
+		this->X = InitX;
+		this->Y = InitY;
+		this->Data = GH_INVISIBLE_COMBO;
+		this->Flags[FFCF_ETHEREAL] = true;
+		int EndX = this->X+8;
+		int EndY = this->Y+8;
+		while(inScreen(this->X+8, this->Y+8)||inScreen(EndX, EndY)){
+			if(inScreen(this->X+8, this->Y+8)){
+				this->X+=VectorX(Step, Angle);
+				this->Y+=VectorY(Step, Angle);
+			}
+			if(Distance(EndX, EndY, this->X+8, this->Y+8)>=Length||!inScreen(this->X+8, this->Y+8)){
+				EndX+=VectorX(Step, Angle);
+				EndY+=VectorY(Step, Angle);
+			}
+			Screen->Line(3, EndX, EndY, this->X+8, this->Y+8, Color, 1, 0, 0, 0, 128);
+			Screen->Line(3, EndX+VectorX(0.5, Angle+90), EndY+VectorY(0.5, Angle+90), this->X+8+VectorX(0.5, Angle+90), this->Y+8+VectorY(0.5, Angle+90), Color, 1, 0, 0, 0, 128);
+			if(lineBoxCollision(EndX, EndY, this->X+8, this->Y+8, Link->X, Link->Y, Link->X+15, Link->Y+15, 0)){
+				eweapon e = FireEWeapon(EW_SCRIPT10, Link->X, Link->Y, 0, 0, Damage, 0, 0, EWF_UNBLOCKABLE);
+				e->DrawYOffset = -1000;
+				SetEWeaponLifespan(e, EWL_TIMER, 1);
+				SetEWeaponDeathEffect(e, EWD_VANISH, 0);
+			}
+			Waitframe();
+		}
+		this->Flags[FFCF_ETHEREAL] = false;
+		this->Data = 0;
+		Quit();
+	}
+}
+
+

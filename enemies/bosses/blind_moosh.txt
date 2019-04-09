@@ -1,0 +1,32 @@
+Setup.txt for Blind in Ganon.qst
+requires ghost.zh and theRandomHeader.zh
+
+const int SPR_BLIND_FACEUP = 94; //The 3x3 sprite used for Blind turning to face upwards
+const int SPR_BLIND_FACEDOWN = 95; //The 3x3 sprite used for Blind turning to face down
+const int SPR_BLIND_FALL = 96; //The 3x3 sprite used for Blind's cloth falling to the floor
+const int SPR_BLIND_RISE = 97; //The 3x3 sprite used for Blind rising back up
+const int SCRIPT_LASER = 6; //The slot of the script used for Blind's laser
+const int COLOR_BLIND_LASER = 0x17; //The color used for Blind's laser
+const int SFX_BLIND_LASER = 72; //The sound played when Blind fires his laser
+
+Make 4 sprites in Graphics/Sprites/Weapons/Misc in example quest it is sprite
+94 95 96 97
+and cons int SCRIPT_LASER is the FFC slot for the script Laser.In the questfile it is 6
+
+sound for Blind laser goes to SFX_BLIND_LASER,in the questfile it is 72
+cons int SFX_BLIND_LASER
+
+Blind Attributes:
+//Attribute 1: The ID of the enemy to spawn every time his health hits 0
+//Attribute 2: How many extra health bars/heads Blind has
+//Attribute 3: How long in frames Blind pauses in between shots
+//Attribute 11: The first of three 3x3 combos (Blind facing down, Blind facing up, Blind's cloth lying on the floor)
+//Attribute 12: The slot this script is loaded into.
+
+Combos for Blind starts with combo 1880.
+
+Make 2 enemies in the enemie editor 
+one for Blind and one for the Blind (head).
+
+put Blind in screen Enemies.
+
