@@ -7,6 +7,7 @@
 /////////////////////////////
 // v0.1 : Initial
 // v0.2 : Changed hardcoded > 3 frame cap to use FOLLOWER_MAX_FRAME in drawing loops.
+// v0.3 : Fix scrolling positions and positions onContinue
 
 int Follower[128] = {-1, -1};
 
@@ -24,6 +25,39 @@ const int FOLLOWER_FRAME 	= 4;
 const int FOLLOWER_SUBFRAME 	= 5;
 
 const int FOLLOWER_ORIG_MIDI 	= 6;
+
+void FollowerContinue()
+{
+	for ( int q = FOLLOWER_X; q <= FOLLOWER_X20; ++q )
+	{ 
+		Follower[q] = Link->X;
+	}
+	for ( int q = FOLLOWER_Y; q <= FOLLOWER_Y20; ++q )
+	{ 
+		Follower[q] = Link->Y;
+	}
+	for ( int q = FOLLOWER_DIR; q <= FOLLOWER_DIR20; ++q )
+	{ 
+		Follower[q] = Link->Dir;
+	}
+}
+
+void FollowerScroll()
+{
+	if ( Link->Action != LA_SCROLLING ) return;
+	for ( int q = FOLLOWER_X; q <= FOLLOWER_X20; ++q )
+	{ 
+		Follower[q] = Link->X;
+	}
+	for ( int q = FOLLOWER_Y; q <= FOLLOWER_Y20; ++q )
+	{ 
+		Follower[q] = Link->Y;
+	}
+	for ( int q = FOLLOWER_DIR; q <= FOLLOWER_DIR20; ++q )
+	{ 
+		Follower[q] = Link->Dir;
+	}
+}
 
 const int FOLLOWER_X		= 10; 
 const int FOLLOWER_X1		= 11;
@@ -119,10 +153,12 @@ global script the_follower
 {
 	void run()
 	{
+		FollowerContinue();
 		while(1)
 		{
 			RescueZelda(FOLLOWER_ZELDA_MIDI, FOLLOWER_ZELDA_MIDI_DURATION);
 			DrawFollower();
+			FollowerScroll();
 			Waitdraw();
 			Waitframe();
 		}
@@ -264,5 +300,15 @@ ffc script SanctuaryZelda
 			Screen->FastTile(2, x, y, til, FOLLOWER_CSET, 128 );
 			Waitframe();
 		}
+	}
+}
+
+global script FollowerResume
+{
+	void run()
+	{
+		//int ss[]="Running onContinue";
+		//TraceS(ss);
+		FollowerContinue();
 	}
 }
