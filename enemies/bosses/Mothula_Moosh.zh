@@ -1,0 +1,64 @@
+//Warning: Script is ancient and very bad.
+//Combo Setup: Grounded (2x2), Flying (4x2), Shadow (4x1)
+void Boss_Waitframe(ffc this, npc n){
+	if(!Ghost_Waitframe(this, n, false, false)){
+		Ghost_Explode(this, n);
+		Quit();
+	}
+}
+ffc script Mothula{
+	void run(int enemyid){
+		npc ghost=Ghost_InitAutoGhost(this, enemyid, GHF_IGNORE_SOLIDITY);
+		int tics=0;
+		int offset=0;
+		int dir=Rand(0, 7);
+		int combo=ghost->Attributes[10];
+		int sounda=ghost->Attributes[0];
+		int soundb=ghost->Attributes[1];
+		int step=ghost->Step;
+		if(step==0)step=100;
+		int firesprite=ghost->Attributes[2];
+		Ghost_Transform(this, ghost, combo, ghost->CSet, 2, 2);
+		ghost->OriginalTile=GH_BLANK_TILE;
+		for(int i=0; i<60; i++){
+			Boss_Waitframe(this, ghost);
+		}
+		Ghost_Transform(this, ghost, combo+1, ghost->CSet, 4, 2);
+		for(int i=0; i<30; i++){
+			if(i%12==0)Game->PlaySound(sounda);
+			Ghost_Y--;
+			if(i>8)Screen->DrawCombo(1, Ghost_X, Ghost_Y+16+i, combo+2, 4, 1, 8, -1, -1, 0, 0, 0, -1, -1, true, 128);
+			Boss_Waitframe(this, ghost);
+		}
+		while(true){
+			tics++;
+			if(tics%12==0)Game->PlaySound(sounda);
+			if(tics>=36){
+				tics=0;
+				dir=Rand(0, 7);
+				if(Rand(1, 6)==6){
+					Game->PlaySound(soundb);
+					for(int rep=0; rep<=3; rep++){
+						for(int i=-1; i<=1; i++){
+							eweapon e=FireEWeapon(EW_FIREBALL, Ghost_X+24, Ghost_Y+16, DegtoRad(90+30*i), 200, ghost->WeaponDamage, firesprite, 0, EWF_UNBLOCKABLE);
+						}
+						for(int i=0; i<4; i++){
+							Screen->DrawCombo(1, Ghost_X, Ghost_Y+46, combo+2, 4, 1, 8, -1, -1, 0, 0, 0, -1, -1, true, 128);
+							Boss_Waitframe(this, ghost);
+						}
+					}
+					for(int i=0; i<20; i++){
+						Screen->DrawCombo(1, Ghost_X, Ghost_Y+46, combo+2, 4, 1, 8, -1, -1, 0, 0, 0, -1, -1, true, 128);
+						Boss_Waitframe(this, ghost);
+					}
+				}
+			}
+			Ghost_Move(dir, step/100, 0);
+			if(!Ghost_CanMove(dir, step/100, 0))dir=OppositeDir(dir);
+			Ghost_Move(DIR_DOWN, Sin(tics*10), 0);
+			offset+=Sin(tics*10);
+			Screen->DrawCombo(1, Ghost_X, Ghost_Y+46-offset, combo+2, 4, 1, 8, -1, -1, 0, 0, 0, -1, -1, true, 128);
+			Boss_Waitframe(this, ghost);
+		}
+	}
+}
