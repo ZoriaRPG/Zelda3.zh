@@ -255,11 +255,10 @@ ffc script Moldorm{
 				Vars[9] = -1;
 		}
 		HandlePushArray(PushArray, 0);
-		Waitframe();
-		// if(!Ghost_Waitframe(this, ghost, false, false)||Ghost_HP<=1){
-			// Moldorm_DeathAnimation(this, ghost, tail, Vars);
-			// Quit();
-		// }
+		if(!Ghost_Waitframe(this, ghost, false, false)||Ghost_HP<=1){
+			Moldorm_DeathAnimation(this, ghost, tail, Vars);
+			Quit();
+		}
 	}
 	void Moldorm_DeathAnimation(ffc this, npc ghost, npc tail, int Vars){
 		__DeathAnimStart(this, ghost);
